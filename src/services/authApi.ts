@@ -1,6 +1,7 @@
 // ============================================
 // Authentication API Service
-// Shared auth pattern — same backend as HeldariaGestionFrontEnd
+// ConfigAllManager — uses Bearer token auth (NOT cookies)
+// to avoid session conflicts with HeldariaGestionFrontEnd
 // ============================================
 
 import { env } from '../config/environment';
@@ -14,23 +15,6 @@ import type {
 } from '../types/auth';
 
 const API_BASE_URL = `${env.apiUrl}/api/v1`;
-
-// ============================================
-// CSRF Token Helper
-// ============================================
-
-function getCSRFToken(): string | null {
-  const name = 'csrf_token=';
-  const decodedCookie = decodeURIComponent(document.cookie);
-  const cookies = decodedCookie.split(';');
-  for (const cookie of cookies) {
-    const trimmed = cookie.trim();
-    if (trimmed.startsWith(name)) {
-      return trimmed.substring(name.length);
-    }
-  }
-  return null;
-}
 
 // ============================================
 // Response Handler
@@ -62,6 +46,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // ============================================
 // Token Storage
+// Uses separate prefix (cfgmgr_) to avoid conflicts
 // ============================================
 
 const STORAGE_PREFIX = 'cfgmgr_';
@@ -141,14 +126,19 @@ export function isTokenExpired(): boolean {
   }
 }
 
-export function getCSRFHeader(): Record<string, string> {
-  const csrfToken = getCSRFToken();
-  if (!csrfToken) return {};
-  return { 'X-CSRF-Token': csrfToken };
+/**
+ * Build Authorization header from stored access token
+ */
+function getAuthHeader(): Record<string, string> {
+  const token = getStoredAccessToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 // ============================================
 // Auth API
+// NOTE: No `credentials: 'include'` — we use Bearer tokens
+// so cookies from HeldariaGestionFrontEnd are NOT affected
 // ============================================
 
 export const authApi = {
@@ -157,7 +147,7 @@ export const authApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
-      credentials: 'include',
+      // NO credentials: 'include' → no cookies sent/received
     });
     return handleResponse<LoginResponse>(response);
   },
@@ -165,20 +155,23 @@ export const authApi = {
   async refreshToken(request?: RefreshTokenRequest): Promise<TokenResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
       body: request ? JSON.stringify(request) : '{}',
-      credentials: 'include',
     });
     return handleResponse<TokenResponse>(response);
   },
 
   async logout(request?: LogoutRequest): Promise<void> {
-    const csrfHeader = getCSRFHeader();
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...csrfHeader },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
       body: request ? JSON.stringify(request) : '{}',
-      credentials: 'include',
     });
     if (!response.ok && import.meta.env.DEV) {
       console.warn('[Auth] Logout request failed, clearing local session anyway');
@@ -188,15 +181,17 @@ export const authApi = {
   async getMe(): Promise<User> {
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
     });
     return handleResponse<User>(response);
   },
 };
 
 // ============================================
-// Fetch with Auto Token Refresh
+// Fetch with Auto Token Refresh (Bearer-only)
 // ============================================
 
 let isRefreshingToken = false;
@@ -240,19 +235,26 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
   }
 
   const headers = new Headers(options.headers);
-  const method = options.method?.toUpperCase() || 'GET';
-  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-    const csrfToken = getCSRFToken();
-    if (csrfToken) headers.set('X-CSRF-Token', csrfToken);
+
+  // Add Bearer token for authentication (instead of cookies)
+  const token = getStoredAccessToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
-  let response = await fetch(url, { ...options, headers, credentials: 'include' });
+  // NO credentials: 'include' → cookies are not sent
+  let response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
     if (import.meta.env.DEV) console.log('[Auth] Got 401, attempting token refresh');
     const refreshed = await attemptTokenRefresh();
     if (refreshed) {
-      response = await fetch(url, { ...options, headers, credentials: 'include' });
+      // Update header with new token after refresh
+      const newToken = getStoredAccessToken();
+      if (newToken) {
+        headers.set('Authorization', `Bearer ${newToken}`);
+      }
+      response = await fetch(url, { ...options, headers });
     } else {
       window.dispatchEvent(new CustomEvent('auth:session-expired'));
       throw new Error('La sesión ha expirado. Por favor inicia sesión nuevamente.');

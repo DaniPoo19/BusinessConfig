@@ -112,25 +112,28 @@ export interface UpdateParameterRequest {
 // Product Types (for import feature)
 // ============================================
 
-export interface ProductAddon {
-  _id?: string;
-  id?: string;
+export interface CustomizationOption {
+  id: string;
   name: string;
   price: number;
   photos: string[];
   is_available: boolean;
 }
 
-export interface IncludedAddons {
+export interface CustomizationGroup {
+  id: string;
+  name: string;
+  type: 'SELECTION' | 'ADDON';
+  min_selections: number;
   max_selections: number;
-  options: ProductAddon[];
+  options: CustomizationOption[];
 }
 
 export interface PriceVariation {
   type: string;
   price: number;
   photo?: string;
-  included_addons: IncludedAddons;
+  customization_groups?: CustomizationGroup[];
 }
 
 export interface Product {
@@ -142,7 +145,6 @@ export interface Product {
   category: string;
   photos: string[];
   price_variations: PriceVariation[];
-  available_addons: ProductAddon[];
   is_available: boolean;
   is_unlimited_stock: boolean;
   stock: number | null;
@@ -177,6 +179,18 @@ export interface ApiResponse<T> {
 export interface ProductImportResult {
   total: number;
   successful: number;
+  failed: number;
+  errors: string[];
+}
+
+// ============================================
+// Groups Import Result
+// ============================================
+
+export interface GroupsImportResult {
+  total: number;
+  updated: number;
+  noMatch: number;
   failed: number;
   errors: string[];
 }

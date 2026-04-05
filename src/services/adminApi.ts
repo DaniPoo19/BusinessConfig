@@ -196,7 +196,6 @@ export const productsApi = {
           category: src.category,
           photos: src.photos || [],
           price_variations: src.price_variations || [],
-          available_addons: src.available_addons || [],
           is_addon: false,
           is_available: src.is_available,
           is_unlimited_stock: src.is_unlimited_stock,
@@ -228,7 +227,92 @@ export const productsApi = {
 
     return result;
   },
+
+  /**
+   * Import customization groups from one sale point to another.
+   * For each product in source, finds a matching product in target by name
+   * and replaces its customization_groups (injected into each price_variation).
+   * Prices and variation types of the target product are preserved.
+   */
+  async importCustomizationGroups(
+    sourceSalePointId: string,
+    targetCompanyId: string,
+    targetSalePointId: string,
+    onProgress?: (done: number, total: number) => void
+  ): Promise<GroupsImportResult> {
+    const [sourceProducts, targetProducts] = await Promise.all([
+      this.getBySalePoint(sourceSalePointId),
+      this.getBySalePoint(targetSalePointId),
+    ]);
+
+    if (sourceProducts.length === 0) {
+      throw new Error('No hay productos en la sucursal de origen');
+    }
+
+    // Build a normalised name → product map for the target
+    const targetByName = new Map<string, Product>();
+    for (const tp of targetProducts) {
+      targetByName.set(tp.name.trim().toLowerCase(), tp);
+    }
+
+    const result: GroupsImportResult = {
+      total: sourceProducts.length,
+      updated: 0,
+      noMatch: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (let i = 0; i < sourceProducts.length; i++) {
+      const src = sourceProducts[i];
+      const targetProduct = targetByName.get(src.name.trim().toLowerCase());
+
+      if (!targetProduct) {
+        result.noMatch++;
+        onProgress?.(i + 1, sourceProducts.length);
+        continue;
+      }
+
+      // Build updated price_variations for the target product:
+      // keep target's type/price/photo but apply source's customization_groups
+      const srcGroups =
+        src.price_variations?.[0]?.customization_groups ?? [];
+
+      const updatedVariations = targetProduct.price_variations.map((pv) => ({
+        ...pv,
+        customization_groups: srcGroups,
+      }));
+
+      try {
+        const res = await fetchWithAuth(`${API}/api/v1/products/${targetProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_id: targetCompanyId,
+            sale_point_id: targetSalePointId,
+            price_variations: updatedVariations,
+          }),
+        });
+
+        if (res.ok) {
+          result.updated++;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          result.failed++;
+          result.errors.push(`${targetProduct.name}: ${err.error || 'Error desconocido'}`);
+        }
+      } catch (err) {
+        result.failed++;
+        result.errors.push(
+          `${targetProduct.name}: ${err instanceof Error ? err.message : 'Error de red'}`
+        );
+      }
+
+      onProgress?.(i + 1, sourceProducts.length);
+    }
+
+    return result;
+  },
 };
 
-// We need a local Product type import
-import type { Product, ProductImportResult } from '../types/company';
+import type { Product, ProductImportResult, GroupsImportResult } from '../types/company';

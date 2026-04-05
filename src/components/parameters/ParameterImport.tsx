@@ -8,6 +8,7 @@ import {
   Check,
   AlertTriangle,
   Package,
+  Layers,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Spinner, EmptyState } from '../ui';
 import { toast } from '../ui/Toast';
@@ -19,6 +20,7 @@ const IMPORTABLE_ITEMS = [
   { key: 'BUSINESS_HOURS', label: 'Horarios de Atención', icon: Clock, color: 'text-blue-600 bg-blue-50', desc: 'Hora de apertura y cierre', type: 'parameter' as const },
   { key: 'DELIVERY_COST', label: 'Barrios / Domicilios', icon: Truck, color: 'text-green-600 bg-green-50', desc: 'Lista de barrios con precios', type: 'parameter' as const },
   { key: 'PRODUCTS', label: 'Productos', icon: Package, color: 'text-purple-600 bg-purple-50', desc: 'Todos los productos del catálogo', type: 'products' as const },
+  { key: 'CUSTOMIZATION_GROUPS', label: 'Grupos de Personalización', icon: Layers, color: 'text-orange-600 bg-orange-50', desc: 'Sabores y adiciones por producto', type: 'groups' as const },
 ] as const;
 
 type ImportableKey = (typeof IMPORTABLE_ITEMS)[number]['key'];
@@ -138,6 +140,36 @@ export function ParameterImport() {
             error: err instanceof Error ? err.message : 'Error desconocido',
           });
         }
+      } else if (item.type === 'groups') {
+        // Import customization groups
+        try {
+          const result = await productsApi.importCustomizationGroups(
+            sourceSalePointId,
+            targetCompanyId,
+            targetSalePointId,
+            (done, total) => setProgress(`Importando grupos... ${done}/${total}`)
+          );
+
+          const parts: string[] = [];
+          if (result.updated > 0) parts.push(`${result.updated} actualizado${result.updated !== 1 ? 's' : ''}`);
+          if (result.noMatch > 0) parts.push(`${result.noMatch} sin coincidencia`);
+          if (result.failed > 0) parts.push(`${result.failed} con error`);
+
+          importResults.push({
+            key,
+            success: result.failed === 0 || result.updated > 0,
+            detail: parts.join(', '),
+            error: result.failed > 0 && result.updated === 0
+              ? result.errors.slice(0, 2).join('; ')
+              : undefined,
+          });
+        } catch (err) {
+          importResults.push({
+            key,
+            success: false,
+            error: err instanceof Error ? err.message : 'Error desconocido',
+          });
+        }
       }
     }
 
@@ -182,7 +214,7 @@ export function ParameterImport() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">Importar Datos</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Copia horarios, barrios y productos de una sucursal a otra
+          Copia horarios, barrios, productos y grupos de personalización de una sucursal a otra
         </p>
       </div>
 
@@ -255,7 +287,7 @@ export function ParameterImport() {
       {/* Item selection */}
       <Card>
         <CardHeader title="Datos a Importar" description="Selecciona qué datos copiar" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {IMPORTABLE_ITEMS.map(({ key, label, icon: Icon, color, desc }) => {
             const checked = selectedItems.has(key);
             return (
