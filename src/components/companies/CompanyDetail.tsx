@@ -210,6 +210,15 @@ export function CompanyDetail() {
                 </option>
               ))}
             </select>
+            {selectedSP && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/empresas/${id}/sucursales/${selectedSP}/grupos`)}
+              >
+                Gestionar Grupos de Personalización
+              </Button>
+            )}
           </div>
 
           {paramsLoading ? (

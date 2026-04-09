@@ -313,6 +313,68 @@ export const productsApi = {
 
     return result;
   },
+
+  /**
+   * Delete a customization group by its name from all products in a sale point.
+   */
+  async deleteCustomizationGroup(
+    salePointId: string,
+    companyId: string,
+    groupName: string,
+    onProgress?: (done: number, total: number) => void
+  ): Promise<{ updated: number; failed: number; errors: string[] }> {
+    const products = await this.getBySalePoint(salePointId);
+    
+    const result = { updated: 0, failed: 0, errors: [] as string[] };
+    let processed = 0;
+
+    for (const product of products) {
+      // Check if product has this group
+      let hasGroup = false;
+      const updatedVariations = product.price_variations.map((pv) => {
+        const groups = pv.customization_groups || [];
+        const filtered = groups.filter(g => g.name !== groupName);
+        if (filtered.length !== groups.length) {
+          hasGroup = true;
+        }
+        return { ...pv, customization_groups: filtered };
+      });
+
+      if (!hasGroup) {
+        processed++;
+        onProgress?.(processed, products.length);
+        continue;
+      }
+
+      try {
+        const res = await fetchWithAuth(`${API}/api/v1/products/${product.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_id: companyId,
+            sale_point_id: salePointId,
+            price_variations: updatedVariations,
+          }),
+        });
+
+        if (res.ok) {
+          result.updated++;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          result.failed++;
+          result.errors.push(`${product.name}: ${err.error || 'Error desconocido'}`);
+        }
+      } catch (err) {
+        result.failed++;
+        result.errors.push(`${product.name}: ${err instanceof Error ? err.message : 'Error'}`);
+      }
+
+      processed++;
+      onProgress?.(processed, products.length);
+    }
+
+    return result;
+  },
 };
 
 import type { Product, ProductImportResult, GroupsImportResult } from '../types/company';

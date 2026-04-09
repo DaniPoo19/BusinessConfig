@@ -19,6 +19,9 @@ export interface CreateCompanyRequest {
   email: string;
   phone?: string;
   address?: string;
+  owner_name: string;
+  owner_email: string;
+  owner_password: string;
 }
 
 export interface UpdateCompanyRequest {

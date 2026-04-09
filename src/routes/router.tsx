@@ -6,6 +6,7 @@ import {
   CompanyDetailPage,
   CompanyCreatePage,
   ParameterImportPage,
+  CustomizationGroupsPage,
 } from '../pages';
 import { ProtectedRoute, GuestRoute } from './guards';
 
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
       {
         path: 'importar-parametros',
         element: <ParameterImportPage />,
+      },
+      {
+        path: 'empresas/:id/sucursales/:salePointId/grupos',
+        element: <CustomizationGroupsPage />,
       },
     ],
   },
