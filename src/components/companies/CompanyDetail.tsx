@@ -19,6 +19,7 @@ import { SalePointForm } from './SalePointForm';
 import { CompanyForm } from './CompanyForm';
 import { BusinessHoursView } from '../parameters/BusinessHoursView';
 import { DeliveryCostView } from '../parameters/DeliveryCostView';
+import { ModulesManager } from './ModulesManager';
 import { useSalePoints, useParameters } from '../../hooks';
 import { companiesApi } from '../../services/adminApi';
 import type { Company, SalePoint } from '../../types/company';
@@ -192,6 +193,9 @@ export function CompanyDetail() {
           </div>
         )}
       </Card>
+
+      {/* Módulos Contratados */}
+      {id && <ModulesManager companyId={id} />}
 
       {/* Parameters Section */}
       {salePoints.length > 0 && (

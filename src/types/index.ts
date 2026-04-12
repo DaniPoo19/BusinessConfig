@@ -7,9 +7,7 @@ export type {
   UpdateCompanyRequest,
   UpdateSalePointRequest,
   Product,
-  ProductAddon,
   PriceVariation,
-  IncludedAddons,
   Parameter,
   BusinessHoursValue,
   DeliveryCostValue,
@@ -18,3 +16,16 @@ export type {
   PaginatedResponse,
   ApiResponse,
 } from './company';
+export type {
+  ModuleId,
+  ModuleConfig,
+  EnabledModulesValue,
+  ModuleCatalogEntry,
+} from './modules';
+export {
+  MODULE_CATALOG,
+  ALL_MODULE_IDS,
+  DEFAULT_MODULES_NEW,
+  DEFAULT_MODULES_EXISTING,
+  ENABLED_MODULES_KEY,
+} from './modules';
