@@ -18,6 +18,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
   const [email, setEmail] = useState(company?.email ?? '');
   const [phone, setPhone] = useState(company?.phone ?? '');
   const [address, setAddress] = useState(company?.address ?? '');
+  const [nit, setNit] = useState(company?.nit ?? '');
   const [saving, setSaving] = useState(false);
 
   // Sync form fields when company prop changes (e.g. opening edit modal)
@@ -27,6 +28,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
       setEmail(company?.email ?? '');
       setPhone(company?.phone ?? '');
       setAddress(company?.address ?? '');
+      setNit(company?.nit ?? '');
     }
   }, [company, isOpen]);
 
@@ -35,6 +37,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
     setEmail(company?.email ?? '');
     setPhone(company?.phone ?? '');
     setAddress(company?.address ?? '');
+    setNit(company?.nit ?? '');
   };
 
   const handleClose = () => {
@@ -54,16 +57,18 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
         if (email !== company.email) payload.email = email.trim();
         if (phone !== company.phone) payload.phone = phone.trim();
         if (address !== company.address) payload.address = address.trim();
+        if (nit !== company.nit) payload.nit = nit.trim();
         await companiesApi.update(company.id, payload);
         toast.success('Empresa actualizada');
       } else {
-        const payload: CreateCompanyRequest = {
+        // Quick creation without owner (legacy path — full creation uses CompanyCreatePage)
+        const payload: UpdateCompanyRequest = {
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
           address: address.trim() || undefined,
         };
-        await companiesApi.create(payload);
+        await companiesApi.create(payload as CreateCompanyRequest);
         toast.success('Empresa creada');
       }
       onSaved();
@@ -141,6 +146,18 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
             onChange={(e) => setAddress(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Calle 10 #15-20, Centro"
+          />
+        </div>
+
+        {/* NIT */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">NIT</label>
+          <input
+            type="text"
+            value={nit}
+            onChange={(e) => setNit(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="123456789-0"
           />
         </div>
 

@@ -9,6 +9,7 @@ export interface Company {
   email: string;
   phone: string;
   address: string;
+  nit: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -19,16 +20,63 @@ export interface CreateCompanyRequest {
   email: string;
   phone?: string;
   address?: string;
+  nit?: string;
   owner_name: string;
   owner_email: string;
   owner_password: string;
+  business_template?: BusinessType;
 }
+
+// ============================================
+// Business Template Types
+// ============================================
+
+export type BusinessType = 'FOOD_STORE' | 'ARTICLE_STORE';
+
+export interface BusinessTemplateConfig {
+  id: BusinessType;
+  name: string;
+  description: string;
+  icon: string;
+  modules: {
+    kitchen: boolean;
+    delivery: boolean;
+    inventory: boolean;
+    metrics: boolean;
+    waiter: boolean;
+  };
+  saleTypes: string[];
+  suggestedRoles: string[];
+}
+
+/** Immutable template definitions — must match backend templates.go */
+export const BUSINESS_TEMPLATES: Record<BusinessType, BusinessTemplateConfig> = {
+  FOOD_STORE: {
+    id: 'FOOD_STORE',
+    name: 'Tienda Comidas',
+    description: 'Restaurantes, heladerías, pizzerías, cafeterías. Flujo completo con cocina, toma de pedidos y domicilios.',
+    icon: '🍦',
+    modules: { kitchen: true, delivery: true, inventory: true, metrics: true, waiter: true },
+    saleTypes: ['ON_SITE', 'PICKUP', 'DELIVERY'],
+    suggestedRoles: ['owner', 'manager', 'cashier', 'waiter', 'chef', 'delivery'],
+  },
+  ARTICLE_STORE: {
+    id: 'ARTICLE_STORE',
+    name: 'Tienda Artículos',
+    description: 'Minimercados, papelerías, ferreterías. Venta directa con domicilios opcionales.',
+    icon: '🏪',
+    modules: { kitchen: false, delivery: true, inventory: true, metrics: true, waiter: false },
+    saleTypes: ['COUNTER_SALE', 'DELIVERY'],
+    suggestedRoles: ['owner', 'manager', 'cashier', 'delivery'],
+  },
+} as const;
 
 export interface UpdateCompanyRequest {
   name?: string;
   email?: string;
   phone?: string;
   address?: string;
+  nit?: string;
 }
 
 export interface SalePoint {
@@ -115,12 +163,19 @@ export interface UpdateParameterRequest {
 // Product Types (for import feature)
 // ============================================
 
+export interface BOMIngredient {
+  inventory_item_id: string;
+  qty_to_deduct: number;
+  unit: string;
+}
+
 export interface CustomizationOption {
   id: string;
   name: string;
   price: number;
   photos: string[];
   is_available: boolean;
+  inventory_items?: BOMIngredient[];
 }
 
 export interface CustomizationGroup {
@@ -136,7 +191,9 @@ export interface PriceVariation {
   type: string;
   price: number;
   photo?: string;
+  base_ingredients?: BOMIngredient[];
   customization_groups?: CustomizationGroup[];
+  min_groups_required?: number;
 }
 
 export interface Product {
@@ -148,6 +205,7 @@ export interface Product {
   category: string;
   photos: string[];
   price_variations: PriceVariation[];
+  is_addon?: boolean;
   is_available: boolean;
   is_unlimited_stock: boolean;
   stock: number | null;

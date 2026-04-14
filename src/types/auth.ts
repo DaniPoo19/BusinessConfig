@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   company_id: string;
   company_name?: string;
+  company_nit?: string;
   sale_point_ids: string[];
   is_active: boolean;
   email_verified?: boolean;
