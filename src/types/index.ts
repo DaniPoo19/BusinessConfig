@@ -8,14 +8,20 @@ export type {
   UpdateSalePointRequest,
   Product,
   PriceVariation,
+  CustomizationGroup,
+  CustomizationOption,
+  BOMIngredient,
   Parameter,
   BusinessHoursValue,
   DeliveryCostValue,
   DeliveryNeighbourhood,
   ProductImportResult,
+  GroupsImportResult,
   PaginatedResponse,
   ApiResponse,
 } from './company';
+export type { BusinessType } from './company';
+export { BUSINESS_TEMPLATES } from './company';
 export type {
   ModuleId,
   ModuleConfig,

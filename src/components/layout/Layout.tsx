@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Building2,
   ArrowRightLeft,
+  FileSpreadsheet,
   LogOut,
   Menu,
   X,
@@ -15,6 +16,7 @@ import { toast } from '../ui/Toast';
 const navItems = [
   { to: '/empresas', label: 'Empresas', icon: Building2 },
   { to: '/importar-parametros', label: 'Importar Datos', icon: ArrowRightLeft },
+  { to: '/importar-csv', label: 'Importar CSV', icon: FileSpreadsheet },
 ];
 
 export function Layout() {

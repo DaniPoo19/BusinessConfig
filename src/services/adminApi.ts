@@ -12,9 +12,51 @@ import type {
   SalePoint,
   CreateSalePointRequest,
   UpdateSalePointRequest,
+  Product,
+  ProductImportResult,
+  GroupsImportResult,
 } from '../types/company';
+import type { CsvParsedProduct } from './csvParser';
 
 const API = environment.apiUrl;
+
+// ============================================
+// Backend error translation (EN → ES)
+// ============================================
+
+const ERROR_TRANSLATIONS: [RegExp | string, string][] = [
+  ['duplicate price variation type', 'Tipo de variación de precio duplicado. Cada variación debe tener un nombre único.'],
+  ['validation error', 'Error de validación'],
+  [/name.*required/i, 'El nombre del producto es obligatorio'],
+  [/category.*required/i, 'La categoría es obligatoria'],
+  [/price.*required/i, 'El precio es obligatorio'],
+  [/price_variations.*required/i, 'Debe tener al menos una variación de precio'],
+  [/min=2/i, 'El texto es demasiado corto (mínimo 2 caracteres)'],
+  [/max=200/i, 'El nombre es demasiado largo (máximo 200 caracteres)'],
+  [/max=1000/i, 'La descripción es demasiado larga (máximo 1000 caracteres)'],
+  [/max=100/i, 'La categoría es demasiado larga (máximo 100 caracteres)'],
+  ['Failed to create product', 'Error interno al crear el producto'],
+  ['Invalid request body', 'Datos del producto inválidos'],
+];
+
+function translateBackendError(error: string | undefined): string {
+  if (!error) return 'Error desconocido';
+
+  for (const [pattern, translation] of ERROR_TRANSLATIONS) {
+    if (typeof pattern === 'string') {
+      if (error.toLowerCase().includes(pattern.toLowerCase())) {
+        return translation;
+      }
+    } else {
+      if (pattern.test(error)) {
+        return translation;
+      }
+    }
+  }
+
+  // If no translation found, return the original but prefix it
+  return `Error del servidor: ${error}`;
+}
 
 // ============================================
 // Response types (match backend format)
@@ -375,6 +417,72 @@ export const productsApi = {
 
     return result;
   },
-};
 
-import type { Product, ProductImportResult, GroupsImportResult } from '../types/company';
+  /**
+   * Import products from parsed CSV data.
+   * Groups have already been resolved by csvParser — each CsvParsedProduct
+   * becomes one POST /api/v1/products call.
+   */
+  async importFromCsv(
+    products: CsvParsedProduct[],
+    companyId: string,
+    salePointId: string,
+    onProgress?: (done: number, total: number) => void
+  ): Promise<ProductImportResult> {
+    const result: ProductImportResult = {
+      total: products.length,
+      successful: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      try {
+        const body = {
+          company_id: companyId,
+          sale_point_id: salePointId,
+          name: p.name,
+          description: p.description || '',
+          category: p.category,
+          photos: [],
+          price_variations: p.price_variations.map((pv) => ({
+            type: pv.type,
+            price: pv.price,
+            photo: '',
+            base_ingredients: [],
+            customization_groups: [],
+            min_groups_required: 0,
+          })),
+          is_addon: false,
+          is_available: true,
+          is_unlimited_stock: true,
+          stock: null,
+        };
+
+        const res = await fetchWithAuth(`${API}/api/v1/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+          result.successful++;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          result.failed++;
+          result.errors.push(`${p.name}: ${translateBackendError(err.error)}`);
+        }
+      } catch (err) {
+        result.failed++;
+        result.errors.push(
+          `${p.name}: ${err instanceof Error ? err.message : 'Error de red'}`
+        );
+      }
+
+      onProgress?.(i + 1, products.length);
+    }
+
+    return result;
+  },
+};
