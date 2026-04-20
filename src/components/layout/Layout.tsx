@@ -4,6 +4,7 @@ import {
   Building2,
   ArrowRightLeft,
   FileSpreadsheet,
+  Package,
   LogOut,
   Menu,
   X,
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/empresas', label: 'Empresas', icon: Building2 },
   { to: '/importar-parametros', label: 'Importar Datos', icon: ArrowRightLeft },
   { to: '/importar-csv', label: 'Importar CSV', icon: FileSpreadsheet },
+  { to: '/importar-inventario-csv', label: 'Importar Inventario', icon: Package },
 ];
 
 export function Layout() {

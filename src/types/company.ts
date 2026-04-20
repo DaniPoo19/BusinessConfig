@@ -255,3 +255,76 @@ export interface GroupsImportResult {
   failed: number;
   errors: string[];
 }
+
+// ============================================
+// Inventory Types
+// ============================================
+
+export interface InventoryItem {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string;
+  sku: string;
+  unit_of_measure: string;
+  category: string;
+  min_stock_alert: number;
+  cost_per_unit: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Warehouse {
+  id: string;
+  company_id: string;
+  sale_point_id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInventoryItemRequest {
+  company_id: string;
+  name: string;
+  description?: string;
+  sku?: string;
+  unit_of_measure: string;
+  category?: string;
+  min_stock_alert?: number;
+  cost_per_unit?: number;
+}
+
+export interface CreateWarehouseRequest {
+  company_id: string;
+  sale_point_id: string;
+  name: string;
+  description?: string;
+  is_default: boolean;
+}
+
+export interface RegisterTransactionRequest {
+  company_id: string;
+  warehouse_id: string;
+  item_id: string;
+  type: string;
+  quantity: number;
+  reason: string;
+  reference_id?: string;
+  notes?: string;
+  performed_by?: string;
+}
+
+export interface InventoryImportResult {
+  itemsCreated: number;
+  itemsReused: number;
+  stockRegistered: number;
+  productsCreated: number;
+  productsUpdated: number;
+  recipesLinked: number;
+  failed: number;
+  errors: string[];
+}

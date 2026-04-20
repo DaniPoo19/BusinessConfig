@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  FileSpreadsheet,
+  Package,
   Upload,
   Eye,
   Rocket,
@@ -9,16 +9,19 @@ import {
   Building2,
   Store,
   Download,
+  ChefHat,
+  Box,
+  Warehouse,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Spinner } from '../components/ui';
 import { CsvUploader } from '../components/ui/CsvUploader';
-import { CsvPreviewTable } from '../components/csv/CsvPreviewTable';
+import { InventoryCsvPreviewTable } from '../components/csv/InventoryCsvPreviewTable';
 import { toast } from '../components/ui/Toast';
 import { useCompanies, useSalePoints } from '../hooks';
-import { productsApi } from '../services/adminApi';
-import { parseCsv } from '../services/csvParser';
-import type { CsvParseResult } from '../services/csvParser';
-import type { ProductImportResult } from '../types/company';
+import { inventoryApi } from '../services/inventoryApi';
+import { parseInventoryCsv } from '../services/inventoryCsvParser';
+import type { InventoryCsvParseResult } from '../services/inventoryCsvParser';
+import type { InventoryImportResult } from '../types/company';
 
 // ============================================
 // Step indicator
@@ -73,7 +76,7 @@ function StepIndicator({ current }: { current: Step }) {
 }
 
 // ============================================
-// Selector sub-component (same pattern as ParameterImport)
+// Selector sub-component
 // ============================================
 
 function SelectorGroup<T>({
@@ -128,10 +131,49 @@ function SelectorGroup<T>({
 }
 
 // ============================================
+// Stat Card mini component
+// ============================================
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+}) {
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-700',
+    green: 'bg-green-50 text-green-700',
+    purple: 'bg-purple-50 text-purple-700',
+    orange: 'bg-orange-50 text-orange-700',
+    red: 'bg-red-50 text-red-700',
+    gray: 'bg-gray-50 text-gray-700',
+  };
+
+  return (
+    <div className="text-center">
+      <div
+        className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-1 ${
+          colorMap[color] || colorMap.gray
+        }`}
+      >
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-xs text-gray-500">{label}</p>
+    </div>
+  );
+}
+
+// ============================================
 // Main Page
 // ============================================
 
-export function CsvImportPage() {
+export function InventoryCsvImportPage() {
   // Step state
   const [step, setStep] = useState<Step>('upload');
 
@@ -142,72 +184,84 @@ export function CsvImportPage() {
   const { salePoints, isLoading: loadingSP } = useSalePoints(companyId || null);
 
   // CSV data
-  const [parseResult, setParseResult] = useState<CsvParseResult | null>(null);
-  const [onlyValid, setOnlyValid] = useState(true);
+  const [parseResult, setParseResult] = useState<InventoryCsvParseResult | null>(null);
 
   // Import state
   const [importing, setImporting] = useState(false);
+  const [progressPhase, setProgressPhase] = useState<string>('');
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [importResult, setImportResult] = useState<ProductImportResult | null>(null);
+  const [importResult, setImportResult] = useState<InventoryImportResult | null>(null);
 
   // ============================================
   // Handlers
   // ============================================
 
   const handleFileLoaded = (content: string, _fileName: string) => {
-    const result = parseCsv(content);
+    const result = parseInventoryCsv(content);
     setParseResult(result);
 
     if (result.globalErrors.length > 0) {
       toast.error(result.globalErrors[0]);
-    } else if (result.products.length === 0) {
-      toast.error('No se encontraron productos en el archivo.');
+    } else if (result.products.length === 0 && result.inventoryItems.length === 0) {
+      toast.error('No se encontraron datos en el archivo.');
     } else {
-      toast.success(`${result.products.length} productos encontrados (${result.validCount} válidos)`);
+      toast.success(
+        `${result.products.length} productos y ${result.inventoryItems.length} artículos de inventario encontrados`
+      );
     }
   };
 
   const canGoToPreview =
-    companyId && salePointId && parseResult && parseResult.products.length > 0;
+    companyId &&
+    salePointId &&
+    parseResult &&
+    (parseResult.products.length > 0 || parseResult.inventoryItems.length > 0);
 
   const goToPreview = () => {
     if (!canGoToPreview) return;
     setStep('preview');
   };
 
-  const productsToImport = parseResult
-    ? onlyValid
-      ? parseResult.products.filter((p) => p.errors.length === 0)
-      : parseResult.products
-    : [];
-
   const handleImport = async () => {
-    if (!companyId || !salePointId || productsToImport.length === 0) return;
+    if (!companyId || !salePointId || !parseResult) return;
 
     setImporting(true);
     setProgress(null);
+    setProgressPhase('');
     setImportResult(null);
 
     try {
-      const result = await productsApi.importFromCsv(
-        productsToImport,
+      const result = await inventoryApi.importFromCsv(
+        parseResult,
         companyId,
         salePointId,
-        (done, total) => setProgress({ done, total })
+        (phase, done, total) => {
+          setProgressPhase(phase);
+          setProgress({ done, total });
+        }
       );
       setImportResult(result);
       setStep('result');
 
+      const totalSuccess =
+        result.itemsCreated +
+        result.itemsReused +
+        result.stockRegistered +
+        result.productsCreated +
+        result.productsUpdated +
+        result.recipesLinked;
+
       if (result.failed === 0) {
-        toast.success(`¡${result.successful} productos importados correctamente!`);
+        toast.success(`¡Importación exitosa! ${totalSuccess} operaciones completadas.`);
       } else {
-        toast.error(`${result.successful} importados, ${result.failed} fallaron`);
+        toast.error(`${totalSuccess} exitosas, ${result.failed} fallaron`);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error de importación');
     } finally {
       setImporting(false);
       setProgress(null);
+      setProgressPhase('');
     }
   };
 
@@ -216,7 +270,7 @@ export function CsvImportPage() {
     setParseResult(null);
     setImportResult(null);
     setProgress(null);
-    setOnlyValid(true);
+    setProgressPhase('');
   };
 
   const handleDownloadErrors = () => {
@@ -226,7 +280,7 @@ export function CsvImportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'errores_importacion.txt';
+    a.download = 'errores_inventario.txt';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -249,11 +303,11 @@ export function CsvImportPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <FileSpreadsheet className="h-6 w-6 text-primary-600" />
-            Importar desde CSV
+            <Package className="h-6 w-6 text-blue-600" />
+            Importar Inventario + Productos
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Carga productos masivamente desde un archivo Excel/CSV separado por punto y coma
+            Crea productos y configura inventario masivamente desde un archivo CSV
           </p>
         </div>
         <StepIndicator current={step} />
@@ -268,7 +322,7 @@ export function CsvImportPage() {
           <Card>
             <CardHeader
               title="Destino de Importación"
-              description="Selecciona la empresa y sucursal donde se crearán los productos"
+              description="Selecciona la empresa y sucursal donde se crearán los productos y el inventario"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <SelectorGroup
@@ -307,7 +361,7 @@ export function CsvImportPage() {
           <Card>
             <CardHeader
               title="Archivo CSV"
-              description="El archivo debe tener 5 columnas separadas por ; : Nombre, Categoría, Descripción, Variación, Precio"
+              description="El archivo debe tener 13 columnas separadas por ; — incluye datos del producto y del inventario"
             />
             <CsvUploader
               onFileLoaded={handleFileLoaded}
@@ -317,70 +371,85 @@ export function CsvImportPage() {
             {/* File format hint */}
             <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-xs font-semibold text-gray-600 mb-2">
-                📋 Formato esperado del CSV:
+                📋 Formato esperado del CSV (13 columnas, separador ;):
               </p>
-              <code className="block text-[11px] text-gray-500 font-mono whitespace-pre-wrap leading-relaxed">
-{`Nombre del Producto;Categoria;Descripcion;Variacion;Precio
-Helado de Vainilla;Helados;Artesanal;Pequeño;8000
-Helado de Vainilla;Helados;Artesanal;Mediano;12000
-Helado de Vainilla;Helados;Artesanal;Grande;15000
-Brownie;Postres;Brownie de chocolate;;7500`}
+              <code className="block text-[10px] text-gray-500 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">
+{`Tipo;Nombre Producto;Categoría Prod;Descripción;Variación;Precio Venta;Nombre Art Inventario;Cat Inv;Unidad;Costo Unit;Stock Inicial;Qty Receta;Alerta Min
+ARTICULO;Manigueta Universal;Ferretería;Repuesto;;15000;Manigueta Universal;Repuestos;UNITS;5000;50;1;5
+RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Leche;Lácteos;MILLILITERS;3;0;200;5000
+RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Azúcar;Ingredientes;GRAMS;5;0;50;2000
+RECETA;Helado Vainilla;Helados;Artesanal;Grande;15000;Leche;Lácteos;MILLILITERS;3;0;400;5000`}
               </code>
-              <p className="text-[10px] text-gray-400 mt-2">
-                💡 Si el <b>nombre del producto se repite</b> en varias filas, se agrupan como variaciones de un mismo producto.
-                Si "Variación" está vacía, se crea como tipo "Único".
-              </p>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] text-gray-400">
+                  <b>ARTICULO</b>: El artículo se descuenta directamente (1 venta = 1 unidad). Para artículos simples como repuestos, tornillos, etc.
+                </p>
+                <p className="text-[10px] text-gray-400">
+                  <b>RECETA</b>: El producto tiene múltiples ingredientes. Cada fila agrega un ingrediente a la receta de esa variación.
+                </p>
+                <p className="text-[10px] text-gray-400">
+                  💡 Si el <b>nombre del producto se repite</b> en varias filas, se agrupan. Los artículos de inventario se deduplicán por nombre.
+                </p>
+              </div>
             </div>
           </Card>
 
           {/* Parse summary */}
-          {parseResult && parseResult.products.length > 0 && (
-            <Card>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">
-                      {parseResult.products.length}
-                    </p>
-                    <p className="text-xs text-gray-500">Productos</p>
+          {parseResult &&
+            (parseResult.products.length > 0 || parseResult.inventoryItems.length > 0) && (
+              <Card>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-900">
+                        {parseResult.products.length}
+                      </p>
+                      <p className="text-xs text-gray-500">Productos</p>
+                    </div>
+                    <div className="h-8 w-px bg-gray-200" />
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {parseResult.inventoryItems.length}
+                      </p>
+                      <p className="text-xs text-gray-500">Items Inv.</p>
+                    </div>
+                    <div className="h-8 w-px bg-gray-200" />
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {parseResult.validCount}
+                      </p>
+                      <p className="text-xs text-gray-500">Válidos</p>
+                    </div>
+                    {parseResult.invalidCount > 0 && (
+                      <>
+                        <div className="h-8 w-px bg-gray-200" />
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-red-500">
+                            {parseResult.invalidCount}
+                          </p>
+                          <p className="text-xs text-gray-500">Con errores</p>
+                        </div>
+                      </>
+                    )}
+                    <div className="h-8 w-px bg-gray-200" />
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-600">
+                        {parseResult.totalRows}
+                      </p>
+                      <p className="text-xs text-gray-500">Filas CSV</p>
+                    </div>
                   </div>
-                  <div className="h-8 w-px bg-gray-200" />
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">
-                      {parseResult.validCount}
-                    </p>
-                    <p className="text-xs text-gray-500">Válidos</p>
-                  </div>
-                  {parseResult.invalidCount > 0 && (
-                    <>
-                      <div className="h-8 w-px bg-gray-200" />
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-red-500">
-                          {parseResult.invalidCount}
-                        </p>
-                        <p className="text-xs text-gray-500">Con errores</p>
-                      </div>
-                    </>
-                  )}
-                  <div className="h-8 w-px bg-gray-200" />
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-600">
-                      {parseResult.totalRows}
-                    </p>
-                    <p className="text-xs text-gray-500">Filas CSV</p>
-                  </div>
+                  <Button
+                    size="lg"
+                    icon={<Eye className="h-5 w-5" />}
+                    onClick={goToPreview}
+                    disabled={!canGoToPreview}
+                  >
+                    Revisar
+                  </Button>
                 </div>
-                <Button
-                  size="lg"
-                  icon={<Eye className="h-5 w-5" />}
-                  onClick={goToPreview}
-                  disabled={!canGoToPreview}
-                >
-                  Revisar Productos
-                </Button>
-              </div>
-            </Card>
-          )}
+              </Card>
+            )}
         </>
       )}
 
@@ -396,33 +465,21 @@ Brownie;Postres;Brownie de chocolate;;7500`}
                 <span className="font-semibold text-gray-900">
                   {parseResult.products.length}
                 </span>{' '}
-                productos parseados ·{' '}
-                <span className="font-semibold text-green-600">
-                  {parseResult.validCount}
+                productos ·{' '}
+                <span className="font-semibold text-blue-600">
+                  {parseResult.inventoryItems.length}
                 </span>{' '}
-                válidos
-                {parseResult.invalidCount > 0 && (
+                artículos inv.
+                {parseResult.inventoryItems.filter((i) => i.initialStock > 0).length > 0 && (
                   <>
                     {' · '}
-                    <span className="font-semibold text-red-500">
-                      {parseResult.invalidCount}
+                    <span className="font-semibold text-green-600">
+                      {parseResult.inventoryItems.filter((i) => i.initialStock > 0).length}
                     </span>{' '}
-                    con errores
+                    con stock
                   </>
                 )}
               </span>
-
-              {parseResult.invalidCount > 0 && (
-                <label className="flex items-center gap-2 text-xs cursor-pointer ml-4 px-3 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={onlyValid}
-                    onChange={(e) => setOnlyValid(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  Solo importar válidos
-                </label>
-              )}
             </div>
 
             <div className="flex gap-2">
@@ -433,9 +490,9 @@ Brownie;Postres;Brownie de chocolate;;7500`}
                 icon={<Rocket className="h-4 w-4" />}
                 onClick={handleImport}
                 isLoading={importing}
-                disabled={productsToImport.length === 0}
+                disabled={parseResult.validCount === 0}
               >
-                Importar {productsToImport.length} productos
+                Importar Todo
               </Button>
             </div>
           </div>
@@ -446,7 +503,7 @@ Brownie;Postres;Brownie de chocolate;;7500`}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600 flex items-center gap-2">
                   <Spinner size="sm" />
-                  Importando productos...
+                  {progressPhase}
                 </span>
                 <span className="font-medium text-gray-900">
                   {progress.done} / {progress.total}
@@ -456,15 +513,15 @@ Brownie;Postres;Brownie de chocolate;;7500`}
                 <div
                   className="h-full bg-primary-500 rounded-full transition-all duration-300 ease-out"
                   style={{
-                    width: `${(progress.done / progress.total) * 100}%`,
+                    width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%`,
                   }}
                 />
               </div>
             </div>
           )}
 
-          {/* Table */}
-          <CsvPreviewTable products={parseResult.products} />
+          {/* Preview tables */}
+          <InventoryCsvPreviewTable parseResult={parseResult} />
         </>
       )}
 
@@ -480,7 +537,9 @@ Brownie;Postres;Brownie de chocolate;;7500`}
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
                   <Check className="h-8 w-8 text-green-600" />
                 </div>
-              ) : importResult.successful === 0 ? (
+              ) : importResult.itemsCreated === 0 &&
+                importResult.productsCreated === 0 &&
+                importResult.recipesLinked === 0 ? (
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
                   <AlertTriangle className="h-8 w-8 text-red-600" />
                 </div>
@@ -493,38 +552,58 @@ Brownie;Postres;Brownie de chocolate;;7500`}
               <h2 className="text-lg font-bold text-gray-900 mb-1">
                 {importResult.failed === 0
                   ? '¡Importación exitosa!'
-                  : importResult.successful === 0
+                  : importResult.itemsCreated === 0 &&
+                    importResult.productsCreated === 0
                   ? 'Importación fallida'
                   : 'Importación parcial'}
               </h2>
-              <p className="text-sm text-gray-500 mb-6">
-                {importResult.successful > 0 &&
-                  `${importResult.successful} producto${importResult.successful !== 1 ? 's' : ''} importado${importResult.successful !== 1 ? 's' : ''} correctamente`}
-                {importResult.successful > 0 && importResult.failed > 0 && ' · '}
-                {importResult.failed > 0 &&
-                  `${importResult.failed} con error`}
-              </p>
 
-              {/* Stats */}
-              <div className="flex items-center justify-center gap-6 mb-6">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-gray-900">
-                    {importResult.total}
-                  </p>
-                  <p className="text-xs text-gray-500">Total</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-green-600">
-                    {importResult.successful}
-                  </p>
-                  <p className="text-xs text-gray-500">Exitosos</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-red-500">
-                    {importResult.failed}
-                  </p>
-                  <p className="text-xs text-gray-500">Fallidos</p>
-                </div>
+              {/* Stats grid */}
+              <div className="flex flex-wrap items-center justify-center gap-6 my-6">
+                <StatCard
+                  label="Items Creados"
+                  value={importResult.itemsCreated}
+                  icon={Package}
+                  color="blue"
+                />
+                <StatCard
+                  label="Items Reusados"
+                  value={importResult.itemsReused}
+                  icon={Box}
+                  color="gray"
+                />
+                <StatCard
+                  label="Stock Registrado"
+                  value={importResult.stockRegistered}
+                  icon={Warehouse}
+                  color="green"
+                />
+                <StatCard
+                  label="Prod. Creados"
+                  value={importResult.productsCreated}
+                  icon={ChefHat}
+                  color="purple"
+                />
+                <StatCard
+                  label="Prod. Actualizados"
+                  value={importResult.productsUpdated}
+                  icon={ChefHat}
+                  color="orange"
+                />
+                <StatCard
+                  label="Recetas Vinculadas"
+                  value={importResult.recipesLinked}
+                  icon={ChefHat}
+                  color="green"
+                />
+                {importResult.failed > 0 && (
+                  <StatCard
+                    label="Errores"
+                    value={importResult.failed}
+                    icon={AlertTriangle}
+                    color="red"
+                  />
+                )}
               </div>
 
               {/* Actions */}
@@ -550,7 +629,7 @@ Brownie;Postres;Brownie de chocolate;;7500`}
             <Card>
               <CardHeader
                 title="Detalle de Errores"
-                description={`${importResult.errors.length} producto${importResult.errors.length !== 1 ? 's' : ''} no se pudieron importar`}
+                description={`${importResult.errors.length} operación${importResult.errors.length !== 1 ? 'es' : ''} con error`}
               />
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {importResult.errors.map((error, idx) => (
