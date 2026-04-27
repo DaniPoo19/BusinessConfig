@@ -10,6 +10,7 @@ import {
   Plus,
   Store,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -19,9 +20,9 @@ import { SalePointForm } from './SalePointForm';
 import { CompanyForm } from './CompanyForm';
 import { BusinessHoursView } from '../parameters/BusinessHoursView';
 import { DeliveryCostView } from '../parameters/DeliveryCostView';
-import { ModulesManager } from './ModulesManager';
 import { useSalePoints, useParameters } from '../../hooks';
 import { companiesApi } from '../../services/adminApi';
+import { companyRefsApi } from '../../services/billingApi';
 import type { Company, SalePoint } from '../../types/company';
 import { useEffect, useCallback } from 'react';
 
@@ -194,8 +195,41 @@ export function CompanyDetail() {
         )}
       </Card>
 
-      {/* Módulos Contratados */}
-      {id && <ModulesManager companyId={id} />}
+      {/* Facturación y Suscripción */}
+      {id && company && (
+        <Card>
+          <CardHeader
+            title="Suscripción y Facturación"
+            description="Gestiona el plan, los módulos y los métodos de pago de esta empresa"
+          />
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-4 mb-4 sm:mb-0">
+              <div className="p-3 bg-white rounded-xl shadow-sm">
+                <CreditCard className="h-6 w-6 text-primary-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Panel de Facturación</h3>
+                <p className="text-sm text-gray-500">Accede al portal para configurar la suscripción de {company.name}</p>
+              </div>
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  // Sincronizar antes de redirigir
+                  await companyRefsApi.sync(company.id, company.name, company.email);
+                } catch (err) {
+                  // Si falla la sincronización manual (ej. ya existe y no importó), igual intentamos navegar
+                  console.error("Error sincronizando empresa:", err);
+                } finally {
+                  navigate(`/suscripciones?companyId=${company.id}`);
+                }
+              }}
+            >
+              Gestionar Suscripción
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Parameters Section */}
       {salePoints.length > 0 && (
