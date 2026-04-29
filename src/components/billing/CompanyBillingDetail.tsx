@@ -18,6 +18,64 @@ import type {
 } from '../../types/subscription';
 import type { SalePoint } from '../../types/company';
 
+import { parametersApi } from '../../services/parametersApi';
+import { ENABLED_MODULES_KEY, DEFAULT_MODULES_NEW } from '../../types/modules';
+import type { ModuleId, ModuleConfig, EnabledModulesValue } from '../../types/modules';
+import { SalePointModulesModal } from '../companies/SalePointModulesModal';
+
+// Helper to sync modules automatically
+async function syncModulesForSalePoint(companyId: string, salePointId: string, planModules: { slug: string }[]) {
+  try {
+    const param = await parametersApi.getByKey(ENABLED_MODULES_KEY, companyId, salePointId);
+    let currentModules = { ...DEFAULT_MODULES_NEW.modules };
+    let paramExists = false;
+
+    if (param && param.sale_point_id === salePointId) {
+      const value = param.value as unknown as EnabledModulesValue;
+      if (value?.modules) {
+        for (const [key, config] of Object.entries(value.modules)) {
+          if (key in currentModules) {
+            currentModules[key as ModuleId] = config as ModuleConfig;
+          }
+        }
+      }
+      paramExists = true;
+    }
+
+    const now = new Date().toISOString();
+    let updated = false;
+
+    // Enable plan modules
+    for (const mod of planModules) {
+      const modId = mod.slug as ModuleId;
+      if (modId in currentModules && !currentModules[modId].enabled) {
+        currentModules[modId] = { enabled: true, activated_at: now };
+        updated = true;
+      }
+    }
+
+    if (updated || !paramExists) {
+      const value: EnabledModulesValue = { modules: currentModules };
+      if (paramExists) {
+        await parametersApi.update(ENABLED_MODULES_KEY, {
+          company_id: companyId,
+          sale_point_id: salePointId,
+          value: value as unknown as Record<string, unknown>,
+        });
+      } else {
+        await parametersApi.create({
+          key: ENABLED_MODULES_KEY,
+          company_id: companyId,
+          sale_point_id: salePointId,
+          value: value as unknown as Record<string, unknown>,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing modules:', err);
+  }
+}
+
 interface Props {
   companyId: string;
   onBack: () => void;
@@ -36,6 +94,7 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
   // Modal states
   const [createModalSpId, setCreateModalSpId] = useState<string | null>(null);
   const [changePlanSub, setChangePlanSub] = useState<Subscription | null>(null);
+  const [modulesModalSp, setModulesModalSp] = useState<{ id: string, name: string, planModules: string[] } | null>(null);
   const [actionLoading, setActionLoading] = useState('');
 
   const loadData = useCallback(async () => {
@@ -207,6 +266,20 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                             <Button variant="ghost" size="sm" icon={<XCircle className="h-4 w-4" />} onClick={() => handleCancel(sub.id)} disabled={actionLoading === `cancel-${sub.id}`} className="text-red-600 hover:bg-red-50">Cancelar</Button>
                           </>
                         )}
+                        {sub && (
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            icon={<Zap className="h-4 w-4" />} 
+                            onClick={() => {
+                              const spPlan = plans.find(p => p.id === sub.plan_id);
+                              const planModules = spPlan ? spPlan.modules.map(m => m.slug) : [];
+                              setModulesModalSp({ id: sp.id, name: sp.name, planModules });
+                            }}
+                          >
+                            Módulos
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setCreateModalSpId(sp.id)}>Crear Suscripción</Button>
@@ -227,6 +300,18 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                           <InfoBlock label="Precio Final" value={formatCOP(sub.final_price)} icon={<CreditCard className="h-4 w-4 text-emerald-500" />} />
                           <InfoBlock label="Periodo" value={PERIOD_LABELS[sub.period_type] || sub.period_type} icon={<Clock className="h-4 w-4 text-accent-500" />} />
                         </div>
+
+                        {/* Plan Modules display */}
+                        {plans.find(p => p.id === sub.plan_id)?.modules && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {plans.find(p => p.id === sub.plan_id)!.modules.map(mod => (
+                              <span key={mod.id} className="px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-md border border-primary-100 flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-primary-500"></span>
+                                {mod.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                         {sub.discount_applied > 0 && (
                           <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-sm text-emerald-700">
@@ -342,6 +427,17 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
           onChanged={loadData} 
         />
       )}
+      {/* Modules Modal */}
+      {modulesModalSp && (
+        <SalePointModulesModal
+          isOpen={true}
+          onClose={() => setModulesModalSp(null)}
+          companyId={companyId}
+          salePointId={modulesModalSp.id}
+          salePointName={modulesModalSp.name}
+          planModules={modulesModalSp.planModules}
+        />
+      )}
     </div>
   );
 }
@@ -388,6 +484,11 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
     try {
       const override = useCustomPrice && typeof customPrice === 'number' ? customPrice : undefined;
       await subscriptionsApi.create(companyId, salePointId, selectedPlan, selectedPeriod, override);
+      
+      if (plan && plan.modules) {
+        await syncModulesForSalePoint(companyId, salePointId, plan.modules);
+      }
+
       toast.success('Suscripción creada con 7 días de prueba');
       onCreated();
       onClose();
@@ -497,6 +598,11 @@ function ChangePlanModal({ isOpen, onClose, subscription, plans, onChanged }: {
     try {
       const override = useCustomPrice && typeof customPrice === 'number' ? customPrice : undefined;
       await subscriptionsApi.changePlan(subscription.id, selectedPlan, override);
+      
+      if (plan && plan.modules) {
+        await syncModulesForSalePoint(subscription.company_id, subscription.sale_point_id, plan.modules);
+      }
+
       toast.success('Plan cambiado exitosamente');
       onChanged();
       onClose();
