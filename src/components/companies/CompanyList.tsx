@@ -41,7 +41,7 @@ export function CompanyList() {
       <Card>
         <div className="text-center py-12">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button variant="secondary" onClick={refetch}>
+          <Button variant="secondary" onClick={() => refetch()}>
             Reintentar
           </Button>
         </div>
@@ -56,7 +56,7 @@ export function CompanyList() {
         description={`${companies.length} empresa${companies.length !== 1 ? 's' : ''} registrada${companies.length !== 1 ? 's' : ''}`}
         action={
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={refetch}>
+            <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={() => refetch()}>
               Actualizar
             </Button>
             <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/empresas/nueva')}>

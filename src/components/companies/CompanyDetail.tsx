@@ -161,7 +161,7 @@ export function CompanyDetail() {
           description={`${salePoints.length} sucursal${salePoints.length !== 1 ? 'es' : ''}`}
           action={
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={refetchSP}>
+              <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={() => refetchSP()}>
                 Actualizar
               </Button>
               <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={handleNewSP}>

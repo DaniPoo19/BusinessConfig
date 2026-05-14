@@ -1,9 +1,23 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Building2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal, Button } from '../ui';
 import { companiesApi } from '../../services/adminApi';
 import { toast } from '../ui/Toast';
 import type { Company, CreateCompanyRequest, UpdateCompanyRequest } from '../../types/company';
+
+const companySchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio').trim(),
+  email: z.string().email('Email inválido').min(1, 'El email es obligatorio').trim(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  nit: z.string().optional(),
+});
+
+type CompanyFormData = z.infer<typeof companySchema>;
 
 interface CompanyFormProps {
   isOpen: boolean;
@@ -14,70 +28,74 @@ interface CompanyFormProps {
 
 export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormProps) {
   const isEditing = !!company;
-  const [name, setName] = useState(company?.name ?? '');
-  const [email, setEmail] = useState(company?.email ?? '');
-  const [phone, setPhone] = useState(company?.phone ?? '');
-  const [address, setAddress] = useState(company?.address ?? '');
-  const [nit, setNit] = useState(company?.nit ?? '');
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Sync form fields when company prop changes (e.g. opening edit modal)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CompanyFormData>({
+    resolver: zodResolver(companySchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      nit: '',
+    },
+  });
+
   useEffect(() => {
     if (isOpen) {
-      setName(company?.name ?? '');
-      setEmail(company?.email ?? '');
-      setPhone(company?.phone ?? '');
-      setAddress(company?.address ?? '');
-      setNit(company?.nit ?? '');
+      reset({
+        name: company?.name ?? '',
+        email: company?.email ?? '',
+        phone: company?.phone ?? '',
+        address: company?.address ?? '',
+        nit: company?.nit ?? '',
+      });
     }
-  }, [company, isOpen]);
-
-  const resetForm = () => {
-    setName(company?.name ?? '');
-    setEmail(company?.email ?? '');
-    setPhone(company?.phone ?? '');
-    setAddress(company?.address ?? '');
-    setNit(company?.nit ?? '');
-  };
+  }, [company, isOpen, reset]);
 
   const handleClose = () => {
-    resetForm();
+    reset();
     onClose();
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
-
-    setSaving(true);
-    try {
+  const mutation = useMutation({
+    mutationFn: async (data: CompanyFormData) => {
       if (isEditing && company) {
         const payload: UpdateCompanyRequest = {};
-        if (name !== company.name) payload.name = name.trim();
-        if (email !== company.email) payload.email = email.trim();
-        if (phone !== company.phone) payload.phone = phone.trim();
-        if (address !== company.address) payload.address = address.trim();
-        if (nit !== company.nit) payload.nit = nit.trim();
-        await companiesApi.update(company.id, payload);
-        toast.success('Empresa actualizada');
+        if (data.name !== company.name) payload.name = data.name;
+        if (data.email !== company.email) payload.email = data.email;
+        if (data.phone !== company.phone) payload.phone = data.phone;
+        if (data.address !== company.address) payload.address = data.address;
+        if (data.nit !== company.nit) payload.nit = data.nit;
+        return companiesApi.update(company.id, payload);
       } else {
-        // Quick creation without owner (legacy path — full creation uses CompanyCreatePage)
-        const payload: UpdateCompanyRequest = {
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim() || undefined,
-          address: address.trim() || undefined,
+        const payload = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
         };
-        await companiesApi.create(payload as CreateCompanyRequest);
-        toast.success('Empresa creada');
+        return companiesApi.create(payload as CreateCompanyRequest);
       }
+    },
+    onSuccess: () => {
+      toast.success(isEditing ? 'Empresa actualizada' : 'Empresa creada');
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       onSaved();
       handleClose();
-    } catch (err) {
+    },
+    onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
-    } finally {
-      setSaving(false);
-    }
+    },
+  });
+
+  const onSubmit = (data: CompanyFormData) => {
+    mutation.mutate(data);
   };
 
   return (
@@ -87,7 +105,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
       title={isEditing ? 'Editar Empresa' : 'Nueva Empresa'}
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg mb-2">
           <Building2 className="h-5 w-5 text-primary-600" />
           <span className="text-sm text-primary-700 font-medium">
@@ -102,12 +120,11 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           </label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            {...register('name')}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
             placeholder="Heladería Ejemplo S.A.S"
           />
+          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
         </div>
 
         {/* Email */}
@@ -117,12 +134,11 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           </label>
           <input
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            {...register('email')}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
             placeholder="admin@ejemplo.com"
           />
+          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
         </div>
 
         {/* Phone */}
@@ -130,8 +146,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
           <input
             type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            {...register('phone')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="+57 300 123 4567"
           />
@@ -142,8 +157,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
           <input
             type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            {...register('address')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Calle 10 #15-20, Centro"
           />
@@ -154,8 +168,7 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           <label className="block text-sm font-medium text-gray-700 mb-1">NIT</label>
           <input
             type="text"
-            value={nit}
-            onChange={(e) => setNit(e.target.value)}
+            {...register('nit')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="123456789-0"
           />
@@ -163,10 +176,10 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <Button variant="secondary" type="button" onClick={handleClose} disabled={saving}>
+          <Button variant="secondary" type="button" onClick={handleClose} disabled={isSubmitting || mutation.isPending}>
             Cancelar
           </Button>
-          <Button type="submit" isLoading={saving} disabled={!name.trim() || !email.trim()}>
+          <Button type="submit" isLoading={isSubmitting || mutation.isPending}>
             {isEditing ? 'Guardar Cambios' : 'Crear Empresa'}
           </Button>
         </div>
