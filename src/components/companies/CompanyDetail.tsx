@@ -11,6 +11,7 @@ import {
   Store,
   RefreshCw,
   CreditCard,
+  Send,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -151,6 +152,8 @@ export function CompanyDetail() {
           <InfoItem icon={<Mail className="h-4 w-4" />} label="Email" value={company.email} />
           <InfoItem icon={<Phone className="h-4 w-4" />} label="Teléfono" value={company.phone || '—'} />
           <InfoItem icon={<MapPin className="h-4 w-4" />} label="Dirección" value={company.address || '—'} />
+          <InfoItem icon={<Send className="h-4 w-4" />} label="Correo Remitente" value={company.email_from_address || 'Por defecto de plataforma'} />
+          <InfoItem icon={<Building2 className="h-4 w-4" />} label="Nombre Remitente" value={company.email_from_name || 'Por defecto de plataforma'} />
         </div>
       </Card>
 

@@ -15,6 +15,8 @@ const companySchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   nit: z.string().optional(),
+  email_from_address: z.union([z.string().email('Email de remitente inválido'), z.literal('')]).optional(),
+  email_from_name: z.string().optional(),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;
@@ -43,6 +45,8 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
       phone: '',
       address: '',
       nit: '',
+      email_from_address: '',
+      email_from_name: '',
     },
   });
 
@@ -54,6 +58,8 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
         phone: company?.phone ?? '',
         address: company?.address ?? '',
         nit: company?.nit ?? '',
+        email_from_address: company?.email_from_address ?? '',
+        email_from_name: company?.email_from_name ?? '',
       });
     }
   }, [company, isOpen, reset]);
@@ -72,6 +78,8 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
         if (data.phone !== company.phone) payload.phone = data.phone;
         if (data.address !== company.address) payload.address = data.address;
         if (data.nit !== company.nit) payload.nit = data.nit;
+        if (data.email_from_address !== company.email_from_address) payload.email_from_address = data.email_from_address;
+        if (data.email_from_name !== company.email_from_name) payload.email_from_name = data.email_from_name;
         return companiesApi.update(company.id, payload);
       } else {
         const payload = {
@@ -79,6 +87,8 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           email: data.email,
           phone: data.phone || undefined,
           address: data.address || undefined,
+          email_from_address: data.email_from_address || undefined,
+          email_from_name: data.email_from_name || undefined,
         };
         return companiesApi.create(payload as CreateCompanyRequest);
       }
@@ -172,6 +182,46 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="123456789-0"
           />
+        </div>
+
+        {/* Email Sender Customization (Resend) */}
+        <div className="border-t border-gray-100 pt-4 mt-4">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3">Configuración de Correo Remitente (Resend)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Email From Address */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Correo Remitente
+              </label>
+              <input
+                type="text"
+                {...register('email_from_address')}
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.email_from_address ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="notificaciones@tudominio.com"
+              />
+              <p className="text-gray-400 text-[11px] mt-1 leading-normal">
+                Debe pertenecer a tu dominio verificado en Resend. Si se deja vacío, usará el correo global.
+              </p>
+              {errors.email_from_address && <p className="text-red-500 text-xs mt-1">{errors.email_from_address.message}</p>}
+            </div>
+
+            {/* Email From Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre de Remitente
+              </label>
+              <input
+                type="text"
+                {...register('email_from_name')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Nombre Empresa"
+              />
+              <p className="text-gray-400 text-[11px] mt-1 leading-normal">
+                Nombre que verán los destinatarios (ej: "Heladería La Coquera").
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Actions */}
