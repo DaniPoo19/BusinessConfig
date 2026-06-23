@@ -10,6 +10,8 @@ import {
   Plus,
   Store,
   RefreshCw,
+  CreditCard,
+  Send,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -19,9 +21,9 @@ import { SalePointForm } from './SalePointForm';
 import { CompanyForm } from './CompanyForm';
 import { BusinessHoursView } from '../parameters/BusinessHoursView';
 import { DeliveryCostView } from '../parameters/DeliveryCostView';
-import { ModulesManager } from './ModulesManager';
 import { useSalePoints, useParameters } from '../../hooks';
 import { companiesApi } from '../../services/adminApi';
+import { companyRefsApi } from '../../services/billingApi';
 import type { Company, SalePoint } from '../../types/company';
 import { useEffect, useCallback } from 'react';
 
@@ -150,6 +152,8 @@ export function CompanyDetail() {
           <InfoItem icon={<Mail className="h-4 w-4" />} label="Email" value={company.email} />
           <InfoItem icon={<Phone className="h-4 w-4" />} label="Teléfono" value={company.phone || '—'} />
           <InfoItem icon={<MapPin className="h-4 w-4" />} label="Dirección" value={company.address || '—'} />
+          <InfoItem icon={<Send className="h-4 w-4" />} label="Correo Remitente" value={company.email_from_address || 'Por defecto de plataforma'} />
+          <InfoItem icon={<Building2 className="h-4 w-4" />} label="Nombre Remitente" value={company.email_from_name || 'Por defecto de plataforma'} />
         </div>
       </Card>
 
@@ -160,7 +164,7 @@ export function CompanyDetail() {
           description={`${salePoints.length} sucursal${salePoints.length !== 1 ? 'es' : ''}`}
           action={
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={refetchSP}>
+              <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={() => refetchSP()}>
                 Actualizar
               </Button>
               <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={handleNewSP}>
@@ -194,8 +198,41 @@ export function CompanyDetail() {
         )}
       </Card>
 
-      {/* Módulos Contratados */}
-      {id && <ModulesManager companyId={id} />}
+      {/* Facturación y Suscripción */}
+      {id && company && (
+        <Card>
+          <CardHeader
+            title="Suscripción y Facturación"
+            description="Gestiona el plan, los módulos y los métodos de pago de esta empresa"
+          />
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-4 mb-4 sm:mb-0">
+              <div className="p-3 bg-white rounded-xl shadow-sm">
+                <CreditCard className="h-6 w-6 text-primary-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Panel de Facturación</h3>
+                <p className="text-sm text-gray-500">Accede al portal para configurar la suscripción de {company.name}</p>
+              </div>
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  // Sincronizar antes de redirigir
+                  await companyRefsApi.sync(company.id, company.name, company.email);
+                } catch (err) {
+                  // Si falla la sincronización manual (ej. ya existe y no importó), igual intentamos navegar
+                  console.error("Error sincronizando empresa:", err);
+                } finally {
+                  navigate(`/suscripciones?companyId=${company.id}`);
+                }
+              }}
+            >
+              Gestionar Suscripción
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Parameters Section */}
       {salePoints.length > 0 && (

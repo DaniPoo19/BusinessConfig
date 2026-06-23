@@ -9,6 +9,8 @@ import {
   CsvImportPage,
   CustomizationGroupsPage,
   DashboardPage,
+  BillingPage,
+  PlansConfigPage,
 } from '../pages';
 import { ProtectedRoute, GuestRoute } from './guards';
 
@@ -60,6 +62,14 @@ export const router = createBrowserRouter([
       {
         path: 'empresas/:id/sucursales/:salePointId/grupos',
         element: <CustomizationGroupsPage />,
+      },
+      {
+        path: 'suscripciones',
+        element: <BillingPage />,
+      },
+      {
+        path: 'configuracion/planes',
+        element: <PlansConfigPage />,
       },
     ],
   },

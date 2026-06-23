@@ -11,6 +11,8 @@ export interface Company {
   address: string;
   nit: string;
   is_active: boolean;
+  email_from_address?: string;
+  email_from_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +27,8 @@ export interface CreateCompanyRequest {
   owner_email: string;
   owner_password: string;
   business_template?: BusinessType;
+  email_from_address?: string;
+  email_from_name?: string;
 }
 
 // ============================================
@@ -77,6 +81,8 @@ export interface UpdateCompanyRequest {
   phone?: string;
   address?: string;
   nit?: string;
+  email_from_address?: string;
+  email_from_name?: string;
 }
 
 export interface SalePoint {

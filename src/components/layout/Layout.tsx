@@ -5,6 +5,8 @@ import {
   Building2,
   ArrowRightLeft,
   FileSpreadsheet,
+  Package,
+  CreditCard,
   LogOut,
   Menu,
   X,
@@ -17,8 +19,11 @@ import { toast } from '../ui/Toast';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/empresas', label: 'Empresas', icon: Building2 },
+  { to: '/suscripciones', label: 'Suscripciones', icon: CreditCard },
+  { to: '/configuracion/planes', label: 'Configurar Planes', icon: Settings },
   { to: '/importar-parametros', label: 'Importar Datos', icon: ArrowRightLeft },
   { to: '/importar-csv', label: 'Importar CSV', icon: FileSpreadsheet },
+  { to: '/importar-inventario-csv', label: 'Importar Inventario', icon: Package },
 ];
 
 export function Layout() {

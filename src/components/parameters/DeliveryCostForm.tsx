@@ -9,10 +9,7 @@ import type { DeliveryNeighbourhood } from '../../types/company';
 
 const schema = z.object({
   neighbourhood: z.string().min(1, 'El nombre del barrio es obligatorio').trim(),
-  price: z.preprocess(
-    (val) => Number(val),
-    z.number().min(0, 'El precio debe ser un número positivo')
-  ),
+  price: z.number().min(0, 'El precio debe ser un número positivo'),
   is_active: z.boolean(),
 });
 
@@ -155,7 +152,7 @@ export function DeliveryCostForm({
           <input
             type="number"
             placeholder="0"
-            {...register('price')}
+            {...register('price', { valueAsNumber: true })}
             className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
               errors.price ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
             }`}
