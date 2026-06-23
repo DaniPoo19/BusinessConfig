@@ -33,7 +33,7 @@ export function GuestRoute({ children }: GuestRouteProps) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/empresa" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

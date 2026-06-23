@@ -57,7 +57,7 @@ export function CompanyDetail() {
 
   // Selected sale point for parameters
   const [selectedSP, setSelectedSP] = useState<string | null>(null);
-  const { businessHours, deliveryCosts, isLoading: paramsLoading } = useParameters(
+  const { businessHours, deliveryCosts, isLoading: paramsLoading, refetch: refetchParams } = useParameters(
     id ?? null,
     selectedSP
   );
@@ -231,8 +231,18 @@ export function CompanyDetail() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <BusinessHoursView businessHours={businessHours} />
-              <DeliveryCostView deliveryCosts={deliveryCosts} />
+              <BusinessHoursView
+                businessHours={businessHours}
+                companyId={id!}
+                salePointId={selectedSP!}
+                onSaved={refetchParams}
+              />
+              <DeliveryCostView
+                deliveryCosts={deliveryCosts}
+                companyId={id!}
+                salePointId={selectedSP!}
+                onSaved={refetchParams}
+              />
             </div>
           )}
         </div>

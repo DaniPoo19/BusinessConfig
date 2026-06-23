@@ -1,20 +1,52 @@
-import { Clock } from 'lucide-react';
-import { Card, CardHeader } from '../ui';
+import { useState } from 'react';
+import { Clock, Pencil } from 'lucide-react';
+import { Card, CardHeader, Button } from '../ui';
 import type { Parameter, BusinessHoursValue } from '../../types/company';
+import { BusinessHoursForm } from './BusinessHoursForm';
 
 interface BusinessHoursViewProps {
   businessHours: Parameter<BusinessHoursValue> | null;
+  companyId: string;
+  salePointId: string;
+  onSaved: () => void;
 }
 
-export function BusinessHoursView({ businessHours }: BusinessHoursViewProps) {
+export function BusinessHoursView({
+  businessHours,
+  companyId,
+  salePointId,
+  onSaved,
+}: BusinessHoursViewProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   if (!businessHours) {
     return (
       <Card>
-        <CardHeader title="Horarios" />
+        <CardHeader 
+          title="Horarios" 
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Pencil className="h-4 w-4" />}
+              onClick={() => setIsOpen(true)}
+            >
+              Configurar
+            </Button>
+          }
+        />
         <div className="flex flex-col items-center py-6 text-gray-400">
           <Clock className="h-8 w-8 mb-2" />
           <p className="text-sm">Sin horarios configurados</p>
         </div>
+        <BusinessHoursForm
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          onSaved={onSaved}
+          companyId={companyId}
+          salePointId={salePointId}
+          currentValue={null}
+        />
       </Card>
     );
   }
@@ -23,7 +55,19 @@ export function BusinessHoursView({ businessHours }: BusinessHoursViewProps) {
 
   return (
     <Card>
-      <CardHeader title="Horarios de Atención" />
+      <CardHeader
+        title="Horarios de Atención"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Pencil className="h-4 w-4" />}
+            onClick={() => setIsOpen(true)}
+          >
+            Editar
+          </Button>
+        }
+      />
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <span
@@ -49,6 +93,15 @@ export function BusinessHoursView({ businessHours }: BusinessHoursViewProps) {
           Zona horaria: <span className="font-medium">{val.timezone}</span>
         </div>
       </div>
+
+      <BusinessHoursForm
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onSaved={onSaved}
+        companyId={companyId}
+        salePointId={salePointId}
+        currentValue={val}
+      />
     </Card>
   );
 }

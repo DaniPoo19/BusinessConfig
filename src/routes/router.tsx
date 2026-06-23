@@ -7,8 +7,8 @@ import {
   CompanyCreatePage,
   ParameterImportPage,
   CsvImportPage,
-  InventoryCsvImportPage,
   CustomizationGroupsPage,
+  DashboardPage,
 } from '../pages';
 import { ProtectedRoute, GuestRoute } from './guards';
 
@@ -31,7 +31,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/empresas" replace />,
+        element: <DashboardPage />,
       },
       {
         path: 'empresas',
@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'importar-inventario-csv',
-        element: <InventoryCsvImportPage />,
+        element: <Navigate to="/importar-csv" state={{ importType: 'inventory' }} replace />,
       },
       {
         path: 'empresas/:id/sucursales/:salePointId/grupos',
