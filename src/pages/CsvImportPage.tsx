@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -135,10 +135,10 @@ function StatCard({
 
 export function CsvImportPage() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Read router state to initialize default type
-  const navigationState = location.state as { importType?: 'products' | 'inventory' } | null;
-  const initialType = navigationState?.importType || 'products';
+  // Read router path to initialize default type
+  const initialType = location.pathname === '/importar-inventario-csv' ? 'inventory' : 'products';
 
   const [step, setStep] = useState<Step>('upload');
 
@@ -188,10 +188,28 @@ export function CsvImportPage() {
     setInventoryParseResult(null);
   }, [companyId, setValue]);
 
-  // Clear loaded files on importType change
+  // Sincronizar el formulario cuando cambia la URL
+  useEffect(() => {
+    const currentType = location.pathname === '/importar-inventario-csv' ? 'inventory' : 'products';
+    setValue('importType', currentType);
+  }, [location.pathname, setValue]);
+
+  // Actualizar la URL cuando cambia la pestaña en el formulario
+  useEffect(() => {
+    if (importType === 'products' && location.pathname !== '/importar-csv') {
+      navigate('/importar-csv', { replace: true });
+    } else if (importType === 'inventory' && location.pathname !== '/importar-inventario-csv') {
+      navigate('/importar-inventario-csv', { replace: true });
+    }
+  }, [importType, location.pathname, navigate]);
+
+  // Limpiar estados y regresar al paso de carga cuando cambia la pestaña
   useEffect(() => {
     setProductsParseResult(null);
     setInventoryParseResult(null);
+    setProductsImportResult(null);
+    setInventoryImportResult(null);
+    setStep('upload');
   }, [importType]);
 
   // Handle CSV file contents loaded
@@ -494,6 +512,7 @@ export function CsvImportPage() {
                     }
                   />
                   <CsvUploader
+                    key={`${importType}-${step}`}
                     onFileLoaded={handleFileLoaded}
                     disabled={!companyId || !salePointId}
                   />

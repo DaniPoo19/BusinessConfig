@@ -57,7 +57,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'importar-inventario-csv',
-        element: <Navigate to="/importar-csv" state={{ importType: 'inventory' }} replace />,
+        element: <CsvImportPage />,
       },
       {
         path: 'empresas/:id/sucursales/:salePointId/grupos',

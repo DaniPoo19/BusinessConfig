@@ -16,21 +16,16 @@ import {
   Boxes,
 } from 'lucide-react';
 import { Card, CardHeader, Spinner } from '../components/ui';
-import { companiesApi, salePointsApi } from '../services/adminApi';
+import { useCompanies } from '../hooks';
+import { salePointsApi } from '../services/adminApi';
 import { parametersApi } from '../services/parametersApi';
 import { ENABLED_MODULES_KEY, type EnabledModulesValue } from '../types/modules';
 
 export function DashboardPage() {
   const navigate = useNavigate();
 
-  // 1. Fetch all companies
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      const res = await companiesApi.getAll(100, 0);
-      return res.companies;
-    },
-  });
+  // 1. Fetch all companies using the unified hook to avoid cache collision
+  const { companies, isLoading: isLoadingCompanies } = useCompanies();
 
   // 2. Fetch sale points and module parameters for all companies
   const { data: details, isLoading: isLoadingDetails } = useQuery({
