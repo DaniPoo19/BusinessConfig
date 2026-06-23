@@ -1,5 +1,6 @@
 import { useState, useRef, type DragEvent } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
+import { toast } from './Toast';
 
 interface CsvUploaderProps {
   onFileLoaded: (content: string, fileName: string) => void;
@@ -13,7 +14,7 @@ export function CsvUploader({ onFileLoaded, disabled }: CsvUploaderProps) {
 
   const processFile = (file: File) => {
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      alert('Solo se permiten archivos .csv');
+      toast.error('Solo se permiten archivos .csv');
       return;
     }
 

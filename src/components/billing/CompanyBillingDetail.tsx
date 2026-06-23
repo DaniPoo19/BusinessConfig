@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   ArrowLeft, CreditCard, Crown, Clock, Zap, CheckCircle, XCircle,
   History, Plus, Trash2, RefreshCw, AlertTriangle, Store, Banknote
@@ -6,22 +9,33 @@ import {
 import { Card, CardHeader, Spinner, Button, Modal } from '../ui';
 import { toast } from '../ui/Toast';
 import {
-  subscriptionsApi, plansApi, paymentMethodsApi, companyRefsApi,
-} from '../../services/billingApi';
-import { salePointsApi } from '../../services/adminApi';
-import {
   STATUS_CONFIG, PERIOD_LABELS, formatCOP, calcFinalPrice,
 } from '../../types/subscription';
 import type {
-  Subscription, SubscriptionPlan, SubscriptionHistory,
-  CompanyRef, PaymentMethod, CompanyPaymentMethod, PeriodType,
+  Subscription, SubscriptionPlan, PeriodType,
 } from '../../types/subscription';
-import type { SalePoint } from '../../types/company';
+
 
 import { parametersApi } from '../../services/parametersApi';
 import { ENABLED_MODULES_KEY, DEFAULT_MODULES_NEW } from '../../types/modules';
 import type { ModuleId, ModuleConfig, EnabledModulesValue } from '../../types/modules';
 import { SalePointModulesModal } from '../companies/SalePointModulesModal';
+import {
+  useCompanies,
+  usePlans,
+  usePaymentMethods,
+  useCompanyPaymentMethods,
+  useCompanySubscriptions,
+  useSalePoints,
+  useSubscriptionHistory,
+  useActivateSubscription,
+  useRecordPayment,
+  useCancelSubscription,
+  useCreateSubscription,
+  useChangePlan,
+  useAddPaymentMethod,
+  useRemovePaymentMethod,
+} from '../../hooks';
 
 // Helper to sync modules automatically
 async function syncModulesForSalePoint(companyId: string, salePointId: string, planModules: { slug: string }[]) {
@@ -82,114 +96,90 @@ interface Props {
 }
 
 export function CompanyBillingDetail({ companyId, onBack }: Props) {
-  const [company, setCompany] = useState<CompanyRef | null>(null);
-  const [salePoints, setSalePoints] = useState<SalePoint[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [historyMap, setHistoryMap] = useState<Record<string, SubscriptionHistory[]>>({});
-  const [allPaymentMethods, setAllPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [companyPaymentMethods, setCompanyPaymentMethods] = useState<CompanyPaymentMethod[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
   // Modal states
   const [createModalSpId, setCreateModalSpId] = useState<string | null>(null);
   const [changePlanSub, setChangePlanSub] = useState<Subscription | null>(null);
   const [modulesModalSp, setModulesModalSp] = useState<{ id: string, name: string, planModules: string[] } | null>(null);
-  const [actionLoading, setActionLoading] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isLoading?: boolean;
+  } | null>(null);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [comps, plansData, allPM, spData] = await Promise.all([
-        companyRefsApi.list(),
-        plansApi.list(true),
-        paymentMethodsApi.list(),
-        salePointsApi.getByCompany(companyId).catch(() => ({ salePoints: [] })),
-      ]);
-      const comp = comps.find((c) => c.id === companyId);
-      setCompany(comp || null);
-      setPlans(plansData || []);
-      setAllPaymentMethods(allPM || []);
-      setSalePoints(spData.salePoints || []);
+  // TanStack Query Hooks
+  const { companies = [], isLoading: loadingComps, refetch: refetchComps } = useCompanies();
+  const { salePoints = [], isLoading: loadingSP, refetch: refetchSP } = useSalePoints(companyId);
+  const { data: subscriptions = [], isLoading: loadingSubs, refetch: refetchSubs } = useCompanySubscriptions(companyId);
+  const { data: plans = [], isLoading: loadingPlans, refetch: refetchPlans } = usePlans(true);
+  const { data: allPaymentMethods = [], isLoading: loadingAllPM } = usePaymentMethods();
+  const { data: companyPaymentMethods = [], isLoading: loadingCPM, refetch: refetchCPM } = useCompanyPaymentMethods(companyId);
 
-      try {
-        const subs = await subscriptionsApi.listByCompany(companyId);
-        setSubscriptions(subs || []);
-        
-        // Fetch history for all subscriptions
-        const histories: Record<string, SubscriptionHistory[]> = {};
-        await Promise.all(subs.map(async (sub) => {
-          const h = await subscriptionsApi.getHistory(sub.id).catch(() => []);
-          histories[sub.id] = h;
-        }));
-        setHistoryMap(histories);
-      } catch {
-        setSubscriptions([]);
-        setHistoryMap({});
-      }
+  // Mutations
+  const activateMutation = useActivateSubscription();
+  const recordPaymentMutation = useRecordPayment();
+  const cancelMutation = useCancelSubscription();
+  const addPMMutation = useAddPaymentMethod();
+  const removePMMutation = useRemovePaymentMethod();
 
-      try {
-        const cpm = await paymentMethodsApi.getForCompany(companyId);
-        setCompanyPaymentMethods(cpm || []);
-      } catch {
-        setCompanyPaymentMethods([]);
-      }
-    } catch (err) {
-      toast.error('Error al cargar datos');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [companyId]);
+  const company = companies.find((c) => c.id === companyId);
+  const isLoading = loadingComps || loadingSP || loadingSubs || loadingPlans || loadingAllPM || loadingCPM;
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const handleRefresh = () => {
+    refetchComps();
+    refetchSP();
+    refetchSubs();
+    refetchPlans();
+    refetchCPM();
+  };
 
   const handleActivate = async (subId: string) => {
-    setActionLoading(`activate-${subId}`);
     try {
-      await subscriptionsApi.activate(subId);
+      await activateMutation.mutateAsync(subId);
       toast.success('Suscripción activada exitosamente');
-      loadData();
     } catch (err: any) {
       toast.error(err.message || 'Error al activar');
-    } finally {
-      setActionLoading('');
     }
   };
 
-  const handleRecordPayment = async (subId: string) => {
-    if (!confirm('¿Registrar pago para esta sucursal? Se extenderá la fecha de vencimiento.')) return;
-    setActionLoading(`payment-${subId}`);
-    try {
-      await subscriptionsApi.recordPayment(subId);
-      toast.success('Pago registrado y fechas actualizadas');
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Error al registrar pago');
-    } finally {
-      setActionLoading('');
-    }
+  const handleRecordPayment = (subId: string) => {
+    setConfirmModal({
+      title: 'Registrar Pago',
+      message: '¿Registrar pago para esta sucursal? Se extenderá la fecha de vencimiento.',
+      onConfirm: async () => {
+        try {
+          await recordPaymentMutation.mutateAsync(subId);
+          toast.success('Pago registrado y fechas actualizadas');
+        } catch (err: any) {
+          toast.error(err.message || 'Error al registrar pago');
+        } finally {
+          setConfirmModal(null);
+        }
+      },
+    });
   };
 
-  const handleCancel = async (subId: string) => {
-    if (!confirm('¿Cancelar esta suscripción?')) return;
-    setActionLoading(`cancel-${subId}`);
-    try {
-      await subscriptionsApi.cancel(subId);
-      toast.success('Suscripción cancelada');
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cancelar');
-    } finally {
-      setActionLoading('');
-    }
+  const handleCancel = (subId: string) => {
+    setConfirmModal({
+      title: 'Cancelar Suscripción',
+      message: '¿Estás seguro de que deseas cancelar esta suscripción?',
+      onConfirm: async () => {
+        try {
+          await cancelMutation.mutateAsync(subId);
+          toast.success('Suscripción cancelada');
+        } catch (err: any) {
+          toast.error(err.message || 'Error al cancelar');
+        } finally {
+          setConfirmModal(null);
+        }
+      },
+    });
   };
 
   const handleAddPaymentMethod = async (pmId: string) => {
     try {
-      await paymentMethodsApi.setForCompany(companyId, pmId);
+      await addPMMutation.mutateAsync({ companyId, paymentMethodId: pmId });
       toast.success('Método de pago agregado');
-      loadData();
     } catch (err: any) {
       toast.error(err.message || 'Error al agregar método');
     }
@@ -197,16 +187,21 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
 
   const handleRemovePaymentMethod = async (pmId: string) => {
     try {
-      await paymentMethodsApi.removeFromCompany(companyId, pmId);
+      await removePMMutation.mutateAsync({ companyId, paymentMethodId: pmId });
       toast.success('Método de pago eliminado');
-      loadData();
     } catch (err: any) {
       toast.error(err.message || 'Error al eliminar');
     }
   };
 
   if (isLoading) {
-    return <Card><div className="flex items-center justify-center py-20"><Spinner size="lg" /></div></Card>;
+    return (
+      <Card>
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="lg" />
+        </div>
+      </Card>
+    );
   }
 
   const assignedPMIds = new Set(companyPaymentMethods.map((m) => m.payment_method_id));
@@ -216,12 +211,16 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />} onClick={onBack}>Volver</Button>
+        <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />} onClick={onBack}>
+          Volver
+        </Button>
         <div>
           <h2 className="text-xl font-bold text-gray-900">{company?.name || 'Empresa'}</h2>
           <p className="text-sm text-gray-500">{company?.email}</p>
         </div>
-        <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={loadData} className="ml-auto">Actualizar</Button>
+        <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />} onClick={handleRefresh} className="ml-auto">
+          Actualizar
+        </Button>
       </div>
 
       <div className="space-y-6">
@@ -238,7 +237,6 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
             {salePoints.map((sp) => {
               const sub = subscriptions.find(s => s.sale_point_id === sp.id);
               const statusCfg = sub ? (STATUS_CONFIG[sub.status] || STATUS_CONFIG.expired) : null;
-              const spHistory = sub ? (historyMap[sub.id] || []) : [];
 
               return (
                 <Card key={sp.id} className="overflow-hidden border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -252,18 +250,40 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                     </div>
                     {sub ? (
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="secondary" icon={<Banknote className="h-4 w-4" />} onClick={() => handleRecordPayment(sub.id)} disabled={actionLoading === `payment-${sub.id}`}>
-                          {actionLoading === `payment-${sub.id}` ? 'Registrando...' : 'Registrar Pago'}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<Banknote className="h-4 w-4" />}
+                          onClick={() => handleRecordPayment(sub.id)}
+                          disabled={recordPaymentMutation.isPending}
+                        >
+                          {recordPaymentMutation.isPending && recordPaymentMutation.variables === sub.id ? 'Registrando...' : 'Registrar Pago'}
                         </Button>
                         {sub.status === 'trial' && (
-                          <Button size="sm" icon={<CheckCircle className="h-4 w-4" />} onClick={() => handleActivate(sub.id)} disabled={actionLoading === `activate-${sub.id}`}>
-                            {actionLoading === `activate-${sub.id}` ? 'Activando...' : 'Activar'}
+                          <Button
+                            size="sm"
+                            icon={<CheckCircle className="h-4 w-4" />}
+                            onClick={() => handleActivate(sub.id)}
+                            disabled={activateMutation.isPending}
+                          >
+                            {activateMutation.isPending && activateMutation.variables === sub.id ? 'Activando...' : 'Activar'}
                           </Button>
                         )}
                         {(sub.status === 'trial' || sub.status === 'active') && (
                           <>
-                            <Button variant="secondary" size="sm" icon={<Zap className="h-4 w-4" />} onClick={() => setChangePlanSub(sub)}>Cambiar Plan</Button>
-                            <Button variant="ghost" size="sm" icon={<XCircle className="h-4 w-4" />} onClick={() => handleCancel(sub.id)} disabled={actionLoading === `cancel-${sub.id}`} className="text-red-600 hover:bg-red-50">Cancelar</Button>
+                            <Button variant="secondary" size="sm" icon={<Zap className="h-4 w-4" />} onClick={() => setChangePlanSub(sub)}>
+                              Cambiar Plan
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<XCircle className="h-4 w-4" />}
+                              onClick={() => handleCancel(sub.id)}
+                              disabled={cancelMutation.isPending}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              Cancelar
+                            </Button>
                           </>
                         )}
                         {sub && (
@@ -282,7 +302,9 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                         )}
                       </div>
                     ) : (
-                      <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setCreateModalSpId(sp.id)}>Crear Suscripción</Button>
+                      <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setCreateModalSpId(sp.id)}>
+                        Crear Suscripción
+                      </Button>
                     )}
                   </div>
 
@@ -342,24 +364,7 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                         )}
                         
                         {/* History for this sub */}
-                        {spHistory.length > 0 && (
-                          <div className="mt-4 border-t border-gray-100 pt-4">
-                            <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-1">
-                              <History className="h-3 w-3" /> Historial
-                            </h5>
-                            <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
-                              {spHistory.map((h) => (
-                                <div key={h.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-                                  <div>
-                                    <span className="font-medium text-gray-700 capitalize">{h.event_type.replace(/_/g, ' ')}</span>
-                                    <span className="text-xs text-gray-400 ml-2">por {h.performed_by || 'Sistema'}</span>
-                                  </div>
-                                  <span className="text-xs text-gray-500">{new Date(h.created_at).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        <SubscriptionHistorySection subId={sub.id} />
                       </div>
                     )}
                   </div>
@@ -381,7 +386,11 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
                   <span className="text-lg">{cpm.payment_method_icon || '💳'}</span>
                   <span className="text-sm font-medium text-gray-900">{cpm.payment_method_name}</span>
                 </div>
-                <button onClick={() => handleRemovePaymentMethod(cpm.payment_method_id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                <button
+                  onClick={() => handleRemovePaymentMethod(cpm.payment_method_id)}
+                  disabled={removePMMutation.isPending}
+                  className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -393,7 +402,12 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
             <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Agregar método</p>
             <div className="flex flex-wrap gap-2">
               {availablePMs.map((pm) => (
-                <button key={pm.id} onClick={() => handleAddPaymentMethod(pm.id)} className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-primary-400 hover:text-primary-700 hover:bg-primary-50/30 transition-all">
+                <button
+                  key={pm.id}
+                  onClick={() => handleAddPaymentMethod(pm.id)}
+                  disabled={addPMMutation.isPending}
+                  className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-primary-400 hover:text-primary-700 hover:bg-primary-50/30 transition-all disabled:opacity-50"
+                >
                   <Plus className="h-3.5 w-3.5" />
                   <span>{pm.icon}</span> {pm.name}
                 </button>
@@ -406,6 +420,23 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
         )}
       </Card>
 
+      {/* Confirm Modal */}
+      {confirmModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => setConfirmModal(null)}
+          title={confirmModal.title}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">{confirmModal.message}</p>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="secondary" onClick={() => setConfirmModal(null)}>Cancelar</Button>
+              <Button onClick={confirmModal.onConfirm}>Confirmar</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Create Modal */}
       {createModalSpId && (
         <CreateSubscriptionModal 
@@ -414,7 +445,6 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
           companyId={companyId} 
           salePointId={createModalSpId}
           plans={plans} 
-          onCreated={loadData} 
         />
       )}
       {/* Change Plan Modal */}
@@ -424,7 +454,6 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
           onClose={() => setChangePlanSub(null)} 
           subscription={changePlanSub} 
           plans={plans.filter((p) => p.id !== changePlanSub.plan_id)} 
-          onChanged={loadData} 
         />
       )}
       {/* Modules Modal */}
@@ -459,54 +488,133 @@ function InfoBlock({ label, value, icon }: { label: string; value: string; icon:
 }
 
 // ============================================
+// Subscription History Subcomponent
+// ============================================
+
+function SubscriptionHistorySection({ subId }: { subId: string }) {
+  const { data: history = [], isLoading } = useSubscriptionHistory(subId);
+
+  if (isLoading) {
+    return <div className="text-xs text-gray-400 py-2">Cargando historial...</div>;
+  }
+
+  if (history.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-1">
+        <History className="h-3 w-3" /> Historial
+      </h5>
+      <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
+        {history.map((h) => (
+          <div key={h.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+            <div>
+              <span className="font-medium text-gray-700 capitalize">{h.event_type.replace(/_/g, ' ')}</span>
+              <span className="text-xs text-gray-400 ml-2">por {h.performed_by || 'Sistema'}</span>
+            </div>
+            <span className="text-xs text-gray-500">
+              {new Date(h.created_at).toLocaleDateString('es-CO', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // Create Subscription Modal
 // ============================================
 
-function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plans, onCreated }: {
-  isOpen: boolean; onClose: () => void; companyId: string; salePointId: string; plans: SubscriptionPlan[]; onCreated: () => void;
+const createSubSchema = z.object({
+  planId: z.string().min(1, 'Selecciona un plan'),
+  periodType: z.enum(['monthly', '6_months', 'annual'] as const),
+  useCustomPrice: z.boolean(),
+  customPrice: z.number().min(0, 'El precio debe ser un número positivo').optional().or(z.nan()),
+});
+
+type CreateSubFormValues = z.infer<typeof createSubSchema>;
+
+function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plans }: {
+  isOpen: boolean; onClose: () => void; companyId: string; salePointId: string; plans: SubscriptionPlan[];
 }) {
-  const [selectedPlan, setSelectedPlan] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('monthly');
-  const [useCustomPrice, setUseCustomPrice] = useState(false);
-  const [customPrice, setCustomPrice] = useState<number | ''>('');
-  const [loading, setLoading] = useState(false);
+  const createSubMutation = useCreateSubscription();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<CreateSubFormValues>({
+    resolver: zodResolver(createSubSchema),
+    defaultValues: {
+      planId: '',
+      periodType: 'monthly',
+      useCustomPrice: false,
+      customPrice: undefined,
+    },
+  });
+
+  const selectedPlan = watch('planId');
+  const selectedPeriod = watch('periodType');
+  const useCustomPrice = watch('useCustomPrice');
+  const customPrice = watch('customPrice');
 
   const plan = plans.find((p) => p.id === selectedPlan);
   const discount = plan?.period_discounts?.find((d) => d.period_type === selectedPeriod);
   const discountPct = discount?.discount_percentage || 0;
   
-  const basePrice = useCustomPrice && typeof customPrice === 'number' ? customPrice : (plan?.base_price_monthly || 0);
+  const parsedPrice = typeof customPrice === 'number' && !isNaN(customPrice) ? customPrice : 0;
+  const basePrice = useCustomPrice ? parsedPrice : (plan?.base_price_monthly || 0);
   const finalPrice = plan ? calcFinalPrice(basePrice, discountPct) : 0;
 
-  const handleCreate = async () => {
-    if (!selectedPlan) return toast.error('Selecciona un plan');
-    setLoading(true);
+  const onSubmit = async (data: CreateSubFormValues) => {
+    if (!data.planId) return toast.error('Selecciona un plan');
     try {
-      const override = useCustomPrice && typeof customPrice === 'number' ? customPrice : undefined;
-      await subscriptionsApi.create(companyId, salePointId, selectedPlan, selectedPeriod, override);
+      const override = data.useCustomPrice && typeof data.customPrice === 'number' && !isNaN(data.customPrice)
+        ? data.customPrice
+        : undefined;
+
+      await createSubMutation.mutateAsync({
+        companyId,
+        salePointId,
+        planId: data.planId,
+        periodType: data.periodType,
+        overridePrice: override,
+      });
       
       if (plan && plan.modules) {
         await syncModulesForSalePoint(companyId, salePointId, plan.modules);
       }
 
       toast.success('Suscripción creada con 7 días de prueba');
-      onCreated();
       onClose();
     } catch (err: any) {
       toast.error(err.message || 'Error al crear suscripción');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Crear Suscripción para Sucursal" size="lg">
-      <div className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Plan</label>
           <div className="grid grid-cols-1 gap-3">
             {plans.map((p) => (
-              <button key={p.id} onClick={() => setSelectedPlan(p.id)} className={`p-4 rounded-xl border-2 text-left transition-all ${selectedPlan === p.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200' : 'border-gray-200 hover:border-gray-300'}`}>
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => setValue('planId', p.id)}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${selectedPlan === p.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200' : 'border-gray-200 hover:border-gray-300'}`}
+              >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-sm text-gray-900">{p.name}</span>
                   <span className="font-bold text-primary-700">{formatCOP(p.base_price_monthly)}<span className="text-xs font-normal text-gray-500">/mes</span></span>
@@ -523,7 +631,12 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
             {(['monthly', '6_months', 'annual'] as PeriodType[]).map((pt) => {
               const d = plan?.period_discounts?.find((dd) => dd.period_type === pt);
               return (
-                <button key={pt} onClick={() => setSelectedPeriod(pt)} className={`p-3 rounded-lg border-2 text-center transition-all ${selectedPeriod === pt ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <button
+                  type="button"
+                  key={pt}
+                  onClick={() => setValue('periodType', pt)}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${selectedPeriod === pt ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
                   <span className="block text-sm font-medium text-gray-900">{PERIOD_LABELS[pt]}</span>
                   {d && d.discount_percentage > 0 && <span className="block text-xs text-emerald-600 font-medium mt-0.5">-{d.discount_percentage}%</span>}
                 </button>
@@ -536,7 +649,7 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
             <div className="mb-4 pb-4 border-b border-gray-200">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer">
-                <input type="checkbox" checked={useCustomPrice} onChange={(e) => setUseCustomPrice(e.target.checked)} className="rounded text-primary-600 focus:ring-primary-500" />
+                <input type="checkbox" {...register('useCustomPrice')} className="rounded text-primary-600 focus:ring-primary-500" />
                 Precio Base Personalizado
               </label>
               {useCustomPrice && (
@@ -544,8 +657,7 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
-                    value={customPrice}
-                    onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : '')}
+                    {...register('customPrice', { valueAsNumber: true })}
                     className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder={`Precio base (Ej: ${plan.base_price_monthly})`}
                   />
@@ -567,10 +679,10 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
         </div>
 
         <div className="flex gap-3 justify-end pt-2">
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleCreate} disabled={!selectedPlan || loading}>{loading ? 'Creando...' : 'Crear Suscripción'}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button type="submit" disabled={!selectedPlan || isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear Suscripción'}</Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
@@ -579,47 +691,80 @@ function CreateSubscriptionModal({ isOpen, onClose, companyId, salePointId, plan
 // Change Plan Modal
 // ============================================
 
-function ChangePlanModal({ isOpen, onClose, subscription, plans, onChanged }: {
-  isOpen: boolean; onClose: () => void; subscription: Subscription; plans: SubscriptionPlan[]; onChanged: () => void;
+const changePlanSchema = z.object({
+  planId: z.string().min(1, 'Selecciona un plan'),
+  useCustomPrice: z.boolean(),
+  customPrice: z.number().min(0, 'El precio debe ser un número positivo').optional().or(z.nan()),
+});
+
+type ChangePlanFormValues = z.infer<typeof changePlanSchema>;
+
+function ChangePlanModal({ isOpen, onClose, subscription, plans }: {
+  isOpen: boolean; onClose: () => void; subscription: Subscription; plans: SubscriptionPlan[];
 }) {
-  const [selectedPlan, setSelectedPlan] = useState('');
-  const [useCustomPrice, setUseCustomPrice] = useState(false);
-  const [customPrice, setCustomPrice] = useState<number | ''>('');
-  const [loading, setLoading] = useState(false);
+  const changePlanMutation = useChangePlan();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<ChangePlanFormValues>({
+    resolver: zodResolver(changePlanSchema),
+    defaultValues: {
+      planId: '',
+      useCustomPrice: false,
+      customPrice: undefined,
+    },
+  });
+
+  const selectedPlan = watch('planId');
+  const useCustomPrice = watch('useCustomPrice');
+  const customPrice = watch('customPrice');
 
   const plan = plans.find((p) => p.id === selectedPlan);
   const discountPct = subscription.discount_applied || 0;
-  const basePrice = useCustomPrice && typeof customPrice === 'number' ? customPrice : (plan?.base_price_monthly || 0);
+  const parsedPrice = typeof customPrice === 'number' && !isNaN(customPrice) ? customPrice : 0;
+  const basePrice = useCustomPrice ? parsedPrice : (plan?.base_price_monthly || 0);
   const finalPrice = plan ? calcFinalPrice(basePrice, discountPct) : 0;
 
-  const handleChange = async () => {
-    if (!selectedPlan) return toast.error('Selecciona un plan');
-    setLoading(true);
+  const onSubmit = async (data: ChangePlanFormValues) => {
+    if (!data.planId) return toast.error('Selecciona un plan');
     try {
-      const override = useCustomPrice && typeof customPrice === 'number' ? customPrice : undefined;
-      await subscriptionsApi.changePlan(subscription.id, selectedPlan, override);
+      const override = data.useCustomPrice && typeof data.customPrice === 'number' && !isNaN(data.customPrice)
+        ? data.customPrice
+        : undefined;
+
+      await changePlanMutation.mutateAsync({
+        id: subscription.id,
+        newPlanId: data.planId,
+        overridePrice: override,
+      });
       
       if (plan && plan.modules) {
         await syncModulesForSalePoint(subscription.company_id, subscription.sale_point_id, plan.modules);
       }
 
       toast.success('Plan cambiado exitosamente');
-      onChanged();
       onClose();
     } catch (err: any) {
       toast.error(err.message || 'Error al cambiar plan');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Cambiar Plan">
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <p className="text-sm text-gray-600">Plan actual: <strong>{subscription.plan_name}</strong></p>
         <div className="space-y-3">
           {plans.map((p) => (
-            <button key={p.id} onClick={() => setSelectedPlan(p.id)} className={`w-full p-4 rounded-xl border-2 text-left transition-all ${selectedPlan === p.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200' : 'border-gray-200 hover:border-gray-300'}`}>
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => setValue('planId', p.id)}
+              className={`w-full p-4 rounded-xl border-2 text-left transition-all ${selectedPlan === p.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200' : 'border-gray-200 hover:border-gray-300'}`}
+            >
               <div className="flex justify-between"><span className="font-semibold text-sm">{p.name}</span><span className="font-bold text-primary-700">{formatCOP(p.base_price_monthly)}/mes</span></div>
               <p className="text-xs text-gray-500 mt-1">{p.description}</p>
             </button>
@@ -630,7 +775,7 @@ function ChangePlanModal({ isOpen, onClose, subscription, plans, onChanged }: {
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mt-4">
             <div className="mb-4 pb-4 border-b border-gray-200">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer">
-                <input type="checkbox" checked={useCustomPrice} onChange={(e) => setUseCustomPrice(e.target.checked)} className="rounded text-primary-600 focus:ring-primary-500" />
+                <input type="checkbox" {...register('useCustomPrice')} className="rounded text-primary-600 focus:ring-primary-500" />
                 Precio Base Personalizado
               </label>
               {useCustomPrice && (
@@ -638,8 +783,7 @@ function ChangePlanModal({ isOpen, onClose, subscription, plans, onChanged }: {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
-                    value={customPrice}
-                    onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : '')}
+                    {...register('customPrice', { valueAsNumber: true })}
                     className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder={`Precio base (Ej: ${plan.base_price_monthly})`}
                   />
@@ -656,10 +800,10 @@ function ChangePlanModal({ isOpen, onClose, subscription, plans, onChanged }: {
         )}
 
         <div className="flex gap-3 justify-end pt-2">
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleChange} disabled={!selectedPlan || loading}>{loading ? 'Cambiando...' : 'Cambiar Plan'}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button type="submit" disabled={!selectedPlan || isSubmitting}>{isSubmitting ? 'Cambiando...' : 'Cambiar Plan'}</Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   CreditCard,
   Crown,
@@ -13,8 +14,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Card, CardHeader, Spinner, Button, EmptyState } from '../ui';
-import { subscriptionsApi, companyRefsApi, plansApi } from '../../services/billingApi';
-import { toast } from '../ui/Toast';
+import { useCompanies, useSubscriptions, usePlans } from '../../hooks';
 import {
   STATUS_CONFIG,
   PERIOD_LABELS,
@@ -22,7 +22,6 @@ import {
 } from '../../types/subscription';
 import type {
   Subscription,
-  CompanyRef,
   SubscriptionPlan,
 } from '../../types/subscription';
 
@@ -31,34 +30,21 @@ interface BillingDashboardProps {
 }
 
 export function BillingDashboard({ onCompanyClick }: BillingDashboardProps) {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [companies, setCompanies] = useState<CompanyRef[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [subsResult, comps, plansData] = await Promise.all([
-        subscriptionsApi.list(100),
-        companyRefsApi.list(),
-        plansApi.list(false),
-      ]);
-      setSubscriptions(subsResult.data || []);
-      setCompanies(comps || []);
-      setPlans(plansData || []);
-    } catch (err) {
-      toast.error('Error al cargar datos de billing');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data: subscriptionsData, isLoading: loadingSubs, refetch: refetchSubs } = useSubscriptions(100);
+  const { companies = [], isLoading: loadingComps, refetch: refetchComps } = useCompanies();
+  const { data: plansData, isLoading: loadingPlans, refetch: refetchPlans } = usePlans(false);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const subscriptions = subscriptionsData?.data || [];
+  const plans = plansData || [];
+  const isLoading = loadingSubs || loadingComps || loadingPlans;
+
+  const handleRefresh = () => {
+    refetchSubs();
+    refetchComps();
+    refetchPlans();
+  };
 
   // Stats
   const activeCount = subscriptions.filter(
@@ -91,7 +77,12 @@ export function BillingDashboard({ onCompanyClick }: BillingDashboardProps) {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
       {/* ====== KPI Cards ====== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
@@ -147,7 +138,7 @@ export function BillingDashboard({ onCompanyClick }: BillingDashboardProps) {
               variant="ghost"
               size="sm"
               icon={<RefreshCw className="h-4 w-4" />}
-              onClick={loadData}
+              onClick={handleRefresh}
             >
               Actualizar
             </Button>
@@ -219,7 +210,7 @@ export function BillingDashboard({ onCompanyClick }: BillingDashboardProps) {
           </div>
         </Card>
       )}
-    </div>
+    </motion.div>
   );
 }
 

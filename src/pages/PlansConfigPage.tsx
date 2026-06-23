@@ -1,36 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { motion } from 'framer-motion';
 import { Settings, Edit2, Percent } from 'lucide-react';
 import { Card, Button, Spinner, Modal, EmptyState } from '../components/ui';
 import { toast } from '../components/ui/Toast';
-import { plansApi } from '../services/billingApi';
+import { usePlans, useUpdatePlanPrice, useUpdatePlanDiscount } from '../hooks';
 import { formatCOP, PERIOD_LABELS } from '../types/subscription';
 import type { SubscriptionPlan, PeriodType } from '../types/subscription';
 
 export function PlansConfigPage() {
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: plans = [], isLoading } = usePlans(false);
 
   // Modal states
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   const [editingDiscount, setEditingDiscount] = useState<{ plan: SubscriptionPlan, periodType: PeriodType, currentPct: number } | null>(null);
 
-  const loadPlans = async () => {
-    setLoading(true);
-    try {
-      const data = await plansApi.list(false); // list all plans
-      setPlans(data || []);
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cargar planes');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPlans();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />
@@ -39,7 +26,12 @@ export function PlansConfigPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 max-w-5xl mx-auto"
+    >
       <div className="flex items-center gap-3">
         <div className="p-3 bg-primary-100 rounded-xl">
           <Settings className="h-6 w-6 text-primary-600" />
@@ -52,7 +44,7 @@ export function PlansConfigPage() {
         </div>
       </div>
 
-      {plans.length === 0 && !loading ? (
+      {plans.length === 0 ? (
         <EmptyState
           icon={<Settings className="h-8 w-8 text-gray-400" />}
           title="No hay planes configurados"
@@ -76,7 +68,6 @@ export function PlansConfigPage() {
           isOpen={true}
           onClose={() => setEditingPlan(null)}
           plan={editingPlan}
-          onSaved={loadPlans}
         />
       )}
 
@@ -87,10 +78,9 @@ export function PlansConfigPage() {
           plan={editingDiscount.plan}
           periodType={editingDiscount.periodType}
           currentPct={editingDiscount.currentPct}
-          onSaved={loadPlans}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -163,28 +153,42 @@ function PlanCard({
 // Edit Price Modal
 // ============================================
 
-function EditPriceModal({ isOpen, onClose, plan, onSaved }: { isOpen: boolean; onClose: () => void; plan: SubscriptionPlan; onSaved: () => void }) {
-  const [price, setPrice] = useState<number | ''>(plan.base_price_monthly);
-  const [loading, setLoading] = useState(false);
+const editPriceSchema = z.object({
+  price: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
+});
 
-  const handleSave = async () => {
-    if (typeof price !== 'number' || price < 0) return toast.error('Ingresa un precio válido');
-    setLoading(true);
+type EditPriceFormValues = z.infer<typeof editPriceSchema>;
+
+function EditPriceModal({ isOpen, onClose, plan }: { isOpen: boolean; onClose: () => void; plan: SubscriptionPlan }) {
+  const updatePriceMutation = useUpdatePlanPrice();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<EditPriceFormValues>({
+    resolver: zodResolver(editPriceSchema),
+    defaultValues: {
+      price: plan.base_price_monthly,
+    },
+  });
+
+  const onSubmit = async (data: EditPriceFormValues) => {
     try {
-      await plansApi.updatePrice(plan.id, price);
+      await updatePriceMutation.mutateAsync({
+        id: plan.id,
+        basePriceMonthly: data.price,
+      });
       toast.success('Precio base actualizado');
-      onSaved();
       onClose();
     } catch (err: any) {
       toast.error(err.message || 'Error al actualizar precio');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Precio Base">
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <p className="text-sm text-gray-600">Modificando el precio base mensual por defecto del plan <strong>{plan.name}</strong>.</p>
         
         <div>
@@ -193,11 +197,15 @@ function EditPriceModal({ isOpen, onClose, plan, onSaved }: { isOpen: boolean; o
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
             <input
               type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')}
-              className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              {...register('price', { valueAsNumber: true })}
+              className={`w-full pl-7 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                errors.price ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+              }`}
             />
           </div>
+          {errors.price && (
+            <p className="text-xs text-red-500 mt-1">{errors.price.message}</p>
+          )}
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
@@ -205,10 +213,10 @@ function EditPriceModal({ isOpen, onClose, plan, onSaved }: { isOpen: boolean; o
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={loading}>{loading ? 'Guardando...' : 'Guardar Precio'}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Precio'}</Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
@@ -217,28 +225,45 @@ function EditPriceModal({ isOpen, onClose, plan, onSaved }: { isOpen: boolean; o
 // Edit Discount Modal
 // ============================================
 
-function EditDiscountModal({ isOpen, onClose, plan, periodType, currentPct, onSaved }: { isOpen: boolean; onClose: () => void; plan: SubscriptionPlan; periodType: PeriodType; currentPct: number; onSaved: () => void }) {
-  const [pct, setPct] = useState<number | ''>(currentPct);
-  const [loading, setLoading] = useState(false);
+const editDiscountSchema = z.object({
+  pct: z.number()
+  .min(0, 'El descuento mínimo es 0%')
+  .max(100, 'El descuento máximo es 100%'),
+});
 
-  const handleSave = async () => {
-    if (typeof pct !== 'number' || pct < 0 || pct > 100) return toast.error('Ingresa un porcentaje válido (0-100)');
-    setLoading(true);
+type EditDiscountFormValues = z.infer<typeof editDiscountSchema>;
+
+function EditDiscountModal({ isOpen, onClose, plan, periodType, currentPct }: { isOpen: boolean; onClose: () => void; plan: SubscriptionPlan; periodType: PeriodType; currentPct: number }) {
+  const updateDiscountMutation = useUpdatePlanDiscount();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<EditDiscountFormValues>({
+    resolver: zodResolver(editDiscountSchema),
+    defaultValues: {
+      pct: currentPct,
+    },
+  });
+
+  const onSubmit = async (data: EditDiscountFormValues) => {
     try {
-      await plansApi.updateDiscount(plan.id, periodType, pct);
+      await updateDiscountMutation.mutateAsync({
+        planId: plan.id,
+        periodType,
+        discountPercentage: data.pct,
+      });
       toast.success('Descuento actualizado');
-      onSaved();
       onClose();
     } catch (err: any) {
       toast.error(err.message || 'Error al actualizar descuento');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Descuento">
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <p className="text-sm text-gray-600">
           Descuento para <strong>{plan.name}</strong> en el periodo <strong>{PERIOD_LABELS[periodType]}</strong>.
         </p>
@@ -250,19 +275,24 @@ function EditDiscountModal({ isOpen, onClose, plan, periodType, currentPct, onSa
               type="number"
               min="0"
               max="100"
-              value={pct}
-              onChange={(e) => setPct(e.target.value ? Number(e.target.value) : '')}
-              className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              {...register('pct', { valueAsNumber: true })}
+              className={`w-full pr-8 pl-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                errors.pct ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+              }`}
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
           </div>
+          {errors.pct && (
+            <p className="text-xs text-red-500 mt-1">{errors.pct.message}</p>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={loading}>{loading ? 'Guardando...' : 'Guardar Descuento'}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Descuento'}</Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
+
