@@ -110,10 +110,15 @@ export function CompanyBillingDetail({ companyId, onBack }: Props) {
   // TanStack Query Hooks
   const { companies = [], isLoading: loadingComps, refetch: refetchComps } = useCompanies();
   const { salePoints = [], isLoading: loadingSP, refetch: refetchSP } = useSalePoints(companyId);
-  const { data: subscriptions = [], isLoading: loadingSubs, refetch: refetchSubs } = useCompanySubscriptions(companyId);
-  const { data: plans = [], isLoading: loadingPlans, refetch: refetchPlans } = usePlans(true);
-  const { data: allPaymentMethods = [], isLoading: loadingAllPM } = usePaymentMethods();
-  const { data: companyPaymentMethods = [], isLoading: loadingCPM, refetch: refetchCPM } = useCompanyPaymentMethods(companyId);
+  const { data: subscriptionsData, isLoading: loadingSubs, refetch: refetchSubs } = useCompanySubscriptions(companyId);
+  const { data: plansData, isLoading: loadingPlans, refetch: refetchPlans } = usePlans(true);
+  const { data: allPaymentMethodsData, isLoading: loadingAllPM } = usePaymentMethods();
+  const { data: companyPaymentMethodsData, isLoading: loadingCPM, refetch: refetchCPM } = useCompanyPaymentMethods(companyId);
+
+  const subscriptions = subscriptionsData || [];
+  const plans = plansData || [];
+  const allPaymentMethods = allPaymentMethodsData || [];
+  const companyPaymentMethods = companyPaymentMethodsData || [];
 
   // Mutations
   const activateMutation = useActivateSubscription();

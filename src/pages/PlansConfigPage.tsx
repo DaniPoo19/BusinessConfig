@@ -11,7 +11,8 @@ import { formatCOP, PERIOD_LABELS } from '../types/subscription';
 import type { SubscriptionPlan, PeriodType } from '../types/subscription';
 
 export function PlansConfigPage() {
-  const { data: plans = [], isLoading } = usePlans(false);
+  const { data: plansData, isLoading } = usePlans(false);
+  const plans = plansData || [];
 
   // Modal states
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
