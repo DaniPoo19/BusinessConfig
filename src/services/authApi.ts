@@ -61,35 +61,21 @@ function getStorage(): Storage {
   return env.isProduction ? sessionStorage : localStorage;
 }
 
+let inMemoryAccessToken: string | null = null;
+let inMemoryTokenExpiry: string | null = null;
+
 export function getStoredAccessToken(): string | null {
-  try {
-    const token = getStorage().getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (!token) return null;
-    return decodeURIComponent(atob(token));
-  } catch {
-    return null;
-  }
+  return inMemoryAccessToken;
 }
 
 export function getStoredRefreshToken(): string | null {
-  try {
-    const token = getStorage().getItem(STORAGE_KEYS.REFRESH_TOKEN);
-    if (!token) return null;
-    return decodeURIComponent(atob(token));
-  } catch {
-    return null;
-  }
+  // Always return 'cookie' to allow silent refresh attempts on mount
+  return 'cookie';
 }
 
-export function storeTokens(accessToken: string, refreshToken: string, expiresAt: string): void {
-  try {
-    const storage = getStorage();
-    storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, btoa(encodeURIComponent(accessToken)));
-    storage.setItem(STORAGE_KEYS.REFRESH_TOKEN, btoa(encodeURIComponent(refreshToken)));
-    storage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, btoa(encodeURIComponent(expiresAt)));
-  } catch {
-    if (import.meta.env.DEV) console.error('[Auth] Error storing tokens');
-  }
+export function storeTokens(accessToken: string, _refreshToken: string, expiresAt: string): void {
+  inMemoryAccessToken = accessToken;
+  inMemoryTokenExpiry = expiresAt;
 }
 
 export function storeUser(user: User): void {
@@ -111,15 +97,16 @@ export function getStoredUser(): User | null {
 }
 
 export function clearAuthStorage(): void {
+  inMemoryAccessToken = null;
+  inMemoryTokenExpiry = null;
   const storage = getStorage();
   Object.values(STORAGE_KEYS).forEach(key => storage.removeItem(key));
 }
 
 export function isTokenExpired(): boolean {
+  if (!inMemoryTokenExpiry) return true;
   try {
-    const expiry = getStorage().getItem(STORAGE_KEYS.TOKEN_EXPIRY);
-    if (!expiry) return true;
-    const expiryDate = new Date(decodeURIComponent(atob(expiry)));
+    const expiryDate = new Date(inMemoryTokenExpiry);
     return Date.now() >= expiryDate.getTime() - 30000;
   } catch {
     return true;
@@ -137,8 +124,8 @@ function getAuthHeader(): Record<string, string> {
 
 // ============================================
 // Auth API
-// NOTE: No `credentials: 'include'` — we use Bearer tokens
-// so cookies from HeldariaGestionFrontEnd are NOT affected
+// NOTE: We use credentials: 'include' ONLY for session/cookie endpoints
+// to support HttpOnly refresh tokens.
 // ============================================
 
 export const authApi = {
@@ -147,31 +134,39 @@ export const authApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
-      // NO credentials: 'include' → no cookies sent/received
+      credentials: 'include',
     });
     return handleResponse<LoginResponse>(response);
   },
 
   async refreshToken(request?: RefreshTokenRequest): Promise<TokenResponse> {
+    const isCookieRefresh = request && request.refresh_token === 'cookie';
+    const body = isCookieRefresh ? '{}' : (request ? JSON.stringify(request) : '{}');
+
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
       },
-      body: request ? JSON.stringify(request) : '{}',
+      body,
+      credentials: 'include',
     });
     return handleResponse<TokenResponse>(response);
   },
 
   async logout(request?: LogoutRequest): Promise<void> {
+    const isCookieLogout = request && request.refresh_token === 'cookie';
+    const body = isCookieLogout ? '{}' : (request ? JSON.stringify(request) : '{}');
+
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
       },
-      body: request ? JSON.stringify(request) : '{}',
+      body,
+      credentials: 'include',
     });
     if (!response.ok && import.meta.env.DEV) {
       console.warn('[Auth] Logout request failed, clearing local session anyway');

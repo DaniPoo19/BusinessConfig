@@ -102,6 +102,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const storedUser = getStoredUser();
       if (!storedUser) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          try {
+            const freshUser = await authApi.getMe();
+            storeUser(freshUser);
+            setState({ user: freshUser, isAuthenticated: true, isLoading: false });
+            setupRefreshInterval();
+            return;
+          } catch {
+            // Ignore failure, proceed to set unauthenticated
+          }
+        }
         setState({ user: null, isAuthenticated: false, isLoading: false });
         return;
       }
