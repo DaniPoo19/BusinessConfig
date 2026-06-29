@@ -25,9 +25,17 @@ export function SalePointCard({ salePoint, onEdit }: SalePointCardProps) {
           </span>
         </div>
         <div className="flex items-center gap-4 text-xs text-gray-500">
-          {salePoint.address && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> {salePoint.address}
+          {(salePoint.address || salePoint.city || salePoint.state) && (
+            <span className="flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">
+                {salePoint.address || ''}
+                {(salePoint.city || salePoint.state) && (
+                  <span className="text-gray-400 font-normal">
+                    {' '}({[salePoint.city, salePoint.state].filter(Boolean).join(', ')})
+                  </span>
+                )}
+              </span>
             </span>
           )}
           {salePoint.phone && (

@@ -1,0 +1,388 @@
+[
+  {
+    "id": "11",
+    "name": "Bogotá D.C.",
+    "municipalities": [
+      { "id": "11001", "name": "Bogotá D.C." }
+    ]
+  },
+  {
+    "id": "05",
+    "name": "Antioquia",
+    "municipalities": [
+      { "id": "05001", "name": "Medellín" },
+      { "id": "05088", "name": "Bello" },
+      { "id": "05266", "name": "Envigado" },
+      { "id": "05360", "name": "Itagüí" },
+      { "id": "05615", "name": "Rionegro" },
+      { "id": "05631", "name": "Sabaneta" },
+      { "id": "05129", "name": "Caldas" },
+      { "id": "05212", "name": "Copacabana" },
+      { "id": "05380", "name": "La Estrella" },
+      { "id": "05045", "name": "Apartadó" },
+      { "id": "05837", "name": "Turbo" },
+      { "id": "05154", "name": "Caucasia" },
+      { "id": "05440", "name": "Marinilla" },
+      { "id": "05318", "name": "Guarne" },
+      { "id": "05147", "name": "Carepa" },
+      { "id": "05172", "name": "Chigorodó" },
+      { "id": "05282", "name": "Fredonia" },
+      { "id": "05697", "name": "Santa Fe de Antioquia" },
+      { "id": "05890", "name": "Yarumal" }
+    ]
+  },
+  {
+    "id": "08",
+    "name": "Atlántico",
+    "municipalities": [
+      { "id": "08001", "name": "Barranquilla" },
+      { "id": "08758", "name": "Soledad" },
+      { "id": "08433", "name": "Malambo" },
+      { "id": "08638", "name": "Sabananalarga" },
+      { "id": "08078", "name": "Baranoa" },
+      { "id": "08573", "name": "Puerto Colombia" },
+      { "id": "08296", "name": "Galapa" },
+      { "id": "08520", "name": "Palmar de Varela" },
+      { "id": "08675", "name": "Santo Tomás" }
+    ]
+  },
+  {
+    "id": "13",
+    "name": "Bolívar",
+    "municipalities": [
+      { "id": "13001", "name": "Cartagena de Indias" },
+      { "id": "13430", "name": "Magangué" },
+      { "id": "13836", "name": "Turbaco" },
+      { "id": "13052", "name": "Arjona" },
+      { "id": "13244", "name": "El Carmen de Bolívar" },
+      { "id": "13490", "name": "Mompos" }
+    ]
+  },
+  {
+    "id": "15",
+    "name": "Boyacá",
+    "municipalities": [
+      { "id": "15001", "name": "Tunja" },
+      { "id": "15238", "name": "Duitama" },
+      { "id": "15759", "name": "Sogamoso" },
+      { "id": "15176", "name": "Chiquinquirá" },
+      { "id": "15572", "name": "Puerto Boyacá" },
+      { "id": "15464", "name": "Moniquirá" },
+      { "id": "15537", "name": "Paipa" },
+      { "id": "15861", "name": "Villa de Leyva" }
+    ]
+  },
+  {
+    "id": "17",
+    "name": "Caldas",
+    "municipalities": [
+      { "id": "17001", "name": "Manizales" },
+      { "id": "17877", "name": "Villamaría" },
+      { "id": "17380", "name": "La Dorada" },
+      { "id": "17174", "name": "Chinchiná" },
+      { "id": "17614", "name": "Riosucio" },
+      { "id": "17050", "name": "Anserma" }
+    ]
+  },
+  {
+    "id": "18",
+    "name": "Caquetá",
+    "municipalities": [
+      { "id": "18001", "name": "Florencia" },
+      { "id": "18756", "name": "San Vicente del Caguán" },
+      { "id": "18592", "name": "Puerto Rico" },
+      { "id": "18205", "name": "Curillo" }
+    ]
+  },
+  {
+    "id": "19",
+    "name": "Cauca",
+    "municipalities": [
+      { "id": "19001", "name": "Popayán" },
+      { "id": "19698", "name": "Santander de Quilichao" },
+      { "id": "19585", "name": "Puerto Tejada" },
+      { "id": "19517", "name": "Patía" },
+      { "id": "19075", "name": "Bolívar" }
+    ]
+  },
+  {
+    "id": "20",
+    "name": "Cesar",
+    "municipalities": [
+      { "id": "20001", "name": "Valledupar" },
+      { "id": "20011", "name": "Aguachica" },
+      { "id": "20178", "name": "Codazzi" },
+      { "id": "20045", "name": "Bosconia" },
+      { "id": "20250", "name": "El Copey" },
+      { "id": "20400", "name": "La Jagua de Ibirico" }
+    ]
+  },
+  {
+    "id": "23",
+    "name": "Córdoba",
+    "municipalities": [
+      { "id": "23001", "name": "Montería" },
+      { "id": "23162", "name": "Cereté" },
+      { "id": "23660", "name": "Sahagún" },
+      { "id": "23417", "name": "Lorica" },
+      { "id": "23466", "name": "Montelíbano" },
+      { "id": "23555", "name": "Planeta Rica" },
+      { "id": "23189", "name": "Ciénaga de Oro" },
+      { "id": "23079", "name": "Buenavista" },
+      { "id": "23068", "name": "Ayapel" }
+    ]
+  },
+  {
+    "id": "25",
+    "name": "Cundinamarca",
+    "municipalities": [
+      { "id": "25754", "name": "Soacha" },
+      { "id": "25175", "name": "Chía" },
+      { "id": "25269", "name": "Facatativá" },
+      { "id": "25899", "name": "Zipaquirá" },
+      { "id": "25290", "name": "Fusagasugá" },
+      { "id": "25473", "name": "Mosquera" },
+      { "id": "25430", "name": "Madrid" },
+      { "id": "25286", "name": "Funza" },
+      { "id": "25307", "name": "Girardot" },
+      { "id": "25126", "name": "Cajicá" },
+      { "id": "25740", "name": "Sibaté" },
+      { "id": "25817", "name": "Tocancipá" },
+      { "id": "25758", "name": "Sopó" },
+      { "id": "25223", "name": "Cota" },
+      { "id": "25322", "name": "Guasca" },
+      { "id": "25488", "name": "Nilo" },
+      { "id": "25843", "name": "Ubaté" },
+      { "id": "25875", "name": "Villeta" }
+    ]
+  },
+  {
+    "id": "27",
+    "name": "Chocó",
+    "municipalities": [
+      { "id": "27001", "name": "Quibdó" },
+      { "id": "27361", "name": "Istmina" },
+      { "id": "27099", "name": "Condoto" },
+      { "id": "27006", "name": "Acandí" }
+    ]
+  },
+  {
+    "id": "41",
+    "name": "Huila",
+    "municipalities": [
+      { "id": "41001", "name": "Neiva" },
+      { "id": "41551", "name": "Pitalito" },
+      { "id": "41306", "name": "Garzón" },
+      { "id": "41396", "name": "La Plata" },
+      { "id": "41132", "name": "Campoalegre" }
+    ]
+  },
+  {
+    "id": "44",
+    "name": "La Guajira",
+    "municipalities": [
+      { "id": "44001", "name": "Riohacha" },
+      { "id": "44430", "name": "Maicao" },
+      { "id": "44847", "name": "Uribia" },
+      { "id": "44650", "name": "San Juan del Cesar" },
+      { "id": "44078", "name": "Barrancas" },
+      { "id": "44098", "name": "Fonseca" }
+    ]
+  },
+  {
+    "id": "47",
+    "name": "Magdalena",
+    "municipalities": [
+      { "id": "47001", "name": "Santa Marta" },
+      { "id": "47189", "name": "Ciénaga" },
+      { "id": "47555", "name": "Plato" },
+      { "id": "47288", "name": "Fundación" },
+      { "id": "47058", "name": "Aracataca" },
+      { "id": "47245", "name": "El Banco" }
+    ]
+  },
+  {
+    "id": "50",
+    "name": "Meta",
+    "municipalities": [
+      { "id": "50001", "name": "Villavicencio" },
+      { "id": "50006", "name": "Acacías" },
+      { "id": "50313", "name": "Granada" },
+      { "id": "50245", "name": "El Paso" },
+      { "id": "50568", "name": "Puerto Gaitán" },
+      { "id": "50573", "name": "Puerto López" }
+    ]
+  },
+  {
+    "id": "52",
+    "name": "Nariño",
+    "municipalities": [
+      { "id": "52001", "name": "Pasto" },
+      { "id": "52835", "name": "Tumaco" },
+      { "id": "52356", "name": "Ipiales" },
+      { "id": "52838", "name": "Túquerres" },
+      { "id": "52696", "name": "Santa Bárbara" }
+    ]
+  },
+  {
+    "id": "54",
+    "name": "Norte de Santander",
+    "municipalities": [
+      { "id": "54001", "name": "Cúcuta" },
+      { "id": "54498", "name": "Ocaña" },
+      { "id": "54874", "name": "Villa del Rosario" },
+      { "id": "54405", "name": "Los Patios" },
+      { "id": "54518", "name": "Pamplona" },
+      { "id": "54810", "name": "Tibu" }
+    ]
+  },
+  {
+    "id": "63",
+    "name": "Quindío",
+    "municipalities": [
+      { "id": "63001", "name": "Armenia" },
+      { "id": "63130", "name": "Calarcá" },
+      { "id": "63470", "name": "Montenegro" },
+      { "id": "63594", "name": "Quimbaya" },
+      { "id": "63190", "name": "Circasia" },
+      { "id": "63302", "name": "Filandia" },
+      { "id": "63690", "name": "Salento" }
+    ]
+  },
+  {
+    "id": "66",
+    "name": "Risaralda",
+    "municipalities": [
+      { "id": "66001", "name": "Pereira" },
+      { "id": "66170", "name": "Dosquebradas" },
+      { "id": "66682", "name": "Santa Rosa de Cabal" },
+      { "id": "66075", "name": "Belén de Umbría" },
+      { "id": "66400", "name": "La Virginia" }
+    ]
+  },
+  {
+    "id": "68",
+    "name": "Santander",
+    "municipalities": [
+      { "id": "68001", "name": "Bucaramanga" },
+      { "id": "68276", "name": "Floridablanca" },
+      { "id": "68307", "name": "Girón" },
+      { "id": "68547", "name": "Piedecuesta" },
+      { "id": "68081", "name": "Barrancabermeja" },
+      { "id": "68679", "name": "San Gil" },
+      { "id": "68755", "name": "Socorro" },
+      { "id": "68077", "name": "Barbosa" }
+    ]
+  },
+  {
+    "id": "70",
+    "name": "Sucre",
+    "municipalities": [
+      { "id": "70001", "name": "Sincelejo" },
+      { "id": "70215", "name": "Corozal" },
+      { "id": "70708", "name": "San Marcos" },
+      { "id": "70742", "name": "Sampués" },
+      { "id": "70820", "name": "Tolú" }
+    ]
+  },
+  {
+    "id": "73",
+    "name": "Tolima",
+    "municipalities": [
+      { "id": "73001", "name": "Ibagué" },
+      { "id": "73268", "name": "Espinal" },
+      { "id": "73449", "name": "Melgar" },
+      { "id": "73443", "name": "Mariquita" },
+      { "id": "73411", "name": "Líbano" },
+      { "id": "73347", "name": "Honda" }
+    ]
+  },
+  {
+    "id": "76",
+    "name": "Valle del Cauca",
+    "municipalities": [
+      { "id": "76001", "name": "Cali" },
+      { "id": "76109", "name": "Buenaventura" },
+      { "id": "76520", "name": "Palmira" },
+      { "id": "76834", "name": "Tuluá" },
+      { "id": "76892", "name": "Yumbo" },
+      { "id": "76111", "name": "Buga" },
+      { "id": "76147", "name": "Cartago" },
+      { "id": "76364", "name": "Jamundí" },
+      { "id": "76275", "name": "Florida" },
+      { "id": "76563", "name": "Pradera" }
+    ]
+  },
+  {
+    "id": "81",
+    "name": "Arauca",
+    "municipalities": [
+      { "id": "81001", "name": "Arauca" },
+      { "id": "81794", "name": "Tame" },
+      { "id": "81387", "name": "Saravena" }
+    ]
+  },
+  {
+    "id": "85",
+    "name": "Casanare",
+    "municipalities": [
+      { "id": "85001", "name": "Yopal" },
+      { "id": "85010", "name": "Aguazul" },
+      { "id": "85440", "name": "Villanueva" }
+    ]
+  },
+  {
+    "id": "86",
+    "name": "Putumayo",
+    "municipalities": [
+      { "id": "86001", "name": "Mocoa" },
+      { "id": "86568", "name": "Puerto Asís" },
+      { "id": "86320", "name": "Orito" }
+    ]
+  },
+  {
+    "id": "88",
+    "name": "San Andrés y Providencia",
+    "municipalities": [
+      { "id": "88001", "name": "San Andrés" },
+      { "id": "88564", "name": "Providencia" }
+    ]
+  },
+  {
+    "id": "91",
+    "name": "Amazonas",
+    "municipalities": [
+      { "id": "91001", "name": "Leticia" },
+      { "id": "91540", "name": "Puerto Nariño" }
+    ]
+  },
+  {
+    "id": "94",
+    "name": "Guainía",
+    "municipalities": [
+      { "id": "94001", "name": "Inírida" }
+    ]
+  },
+  {
+    "id": "95",
+    "name": "Guaviare",
+    "municipalities": [
+      { "id": "95001", "name": "San José del Guaviare" },
+      { "id": "95200", "name": "Calamar" }
+    ]
+  },
+  {
+    "id": "97",
+    "name": "Vaupés",
+    "municipalities": [
+      { "id": "97001", "name": "Mitú" }
+    ]
+  },
+  {
+    "id": "99",
+    "name": "Vichada",
+    "municipalities": [
+      { "id": "99001", "name": "Puerto Carreño" }
+    ]
+  }
+]

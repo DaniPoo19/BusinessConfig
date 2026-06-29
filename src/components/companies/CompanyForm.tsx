@@ -8,12 +8,17 @@ import { Modal, Button } from '../ui';
 import { companiesApi } from '../../services/adminApi';
 import { toast } from '../ui/Toast';
 import type { Company, CreateCompanyRequest, UpdateCompanyRequest } from '../../types/company';
+import { LocationSelector } from './LocationSelector';
 
 const companySchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').trim(),
   email: z.string().email('Email inválido').min(1, 'El email es obligatorio').trim(),
   phone: z.string().optional(),
   address: z.string().optional(),
+  city: z.string().optional(),
+  city_code: z.string().optional(),
+  state: z.string().optional(),
+  state_code: z.string().optional(),
   nit: z.string().optional(),
   email_from_address: z.union([z.string().email('Email de remitente inválido'), z.literal('')]).optional(),
   email_from_name: z.string().optional(),
@@ -36,6 +41,8 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
@@ -44,6 +51,10 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
       email: '',
       phone: '',
       address: '',
+      city: '',
+      city_code: '',
+      state: '',
+      state_code: '',
       nit: '',
       email_from_address: '',
       email_from_name: '',
@@ -57,6 +68,10 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
         email: company?.email ?? '',
         phone: company?.phone ?? '',
         address: company?.address ?? '',
+        city: company?.city ?? '',
+        city_code: company?.city_code ?? '',
+        state: company?.state ?? '',
+        state_code: company?.state_code ?? '',
         nit: company?.nit ?? '',
         email_from_address: company?.email_from_address ?? '',
         email_from_name: company?.email_from_name ?? '',
@@ -77,6 +92,10 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
         if (data.email !== company.email) payload.email = data.email;
         if (data.phone !== company.phone) payload.phone = data.phone;
         if (data.address !== company.address) payload.address = data.address;
+        if (data.city !== company.city) payload.city = data.city;
+        if (data.city_code !== company.city_code) payload.city_code = data.city_code;
+        if (data.state !== company.state) payload.state = data.state;
+        if (data.state_code !== company.state_code) payload.state_code = data.state_code;
         if (data.nit !== company.nit) payload.nit = data.nit;
         if (data.email_from_address !== company.email_from_address) payload.email_from_address = data.email_from_address;
         if (data.email_from_name !== company.email_from_name) payload.email_from_name = data.email_from_name;
@@ -87,6 +106,10 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           email: data.email,
           phone: data.phone || undefined,
           address: data.address || undefined,
+          city: data.city || undefined,
+          city_code: data.city_code || undefined,
+          state: data.state || undefined,
+          state_code: data.state_code || undefined,
           email_from_address: data.email_from_address || undefined,
           email_from_name: data.email_from_name || undefined,
         };
@@ -162,14 +185,23 @@ export function CompanyForm({ isOpen, onClose, onSaved, company }: CompanyFormPr
           />
         </div>
 
+        {/* Location Selector (State & City) */}
+        <LocationSelector
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+          isRequired={true}
+        />
+
         {/* Address */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Dirección (Detalle)</label>
           <input
             type="text"
             {...register('address')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Calle 10 #15-20, Centro"
+            placeholder="Calle 10 #15-20, Barrio Centro"
           />
         </div>
 

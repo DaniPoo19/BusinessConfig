@@ -9,6 +9,10 @@ export interface Company {
   email: string;
   phone: string;
   address: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
   nit: string;
   is_active: boolean;
   email_from_address?: string;
@@ -22,6 +26,10 @@ export interface CreateCompanyRequest {
   email: string;
   phone?: string;
   address?: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
   nit?: string;
   owner_name: string;
   owner_email: string;
@@ -80,6 +88,10 @@ export interface UpdateCompanyRequest {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
   nit?: string;
   email_from_address?: string;
   email_from_name?: string;
@@ -91,6 +103,10 @@ export interface SalePoint {
   name: string;
   address: string;
   phone: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -100,12 +116,20 @@ export interface CreateSalePointRequest {
   name: string;
   address?: string;
   phone?: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
 }
 
 export interface UpdateSalePointRequest {
   name?: string;
   address?: string;
   phone?: string;
+  city?: string;
+  city_code?: string;
+  state?: string;
+  state_code?: string;
 }
 
 // ============================================

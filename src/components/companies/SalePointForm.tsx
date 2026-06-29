@@ -8,11 +8,16 @@ import { Modal, Button } from '../ui';
 import { salePointsApi } from '../../services/adminApi';
 import { toast } from '../ui/Toast';
 import type { SalePoint, CreateSalePointRequest, UpdateSalePointRequest } from '../../types/company';
+import { LocationSelector } from './LocationSelector';
 
 const salePointSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').trim(),
   address: z.string().optional(),
   phone: z.string().optional(),
+  city: z.string().optional(),
+  city_code: z.string().optional(),
+  state: z.string().optional(),
+  state_code: z.string().optional(),
 });
 
 type SalePointFormData = z.infer<typeof salePointSchema>;
@@ -33,6 +38,8 @@ export function SalePointForm({ isOpen, onClose, onSaved, companyId, salePoint }
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SalePointFormData>({
     resolver: zodResolver(salePointSchema),
@@ -40,6 +47,10 @@ export function SalePointForm({ isOpen, onClose, onSaved, companyId, salePoint }
       name: '',
       address: '',
       phone: '',
+      city: '',
+      city_code: '',
+      state: '',
+      state_code: '',
     },
   });
 
@@ -49,6 +60,10 @@ export function SalePointForm({ isOpen, onClose, onSaved, companyId, salePoint }
         name: salePoint?.name ?? '',
         address: salePoint?.address ?? '',
         phone: salePoint?.phone ?? '',
+        city: salePoint?.city ?? '',
+        city_code: salePoint?.city_code ?? '',
+        state: salePoint?.state ?? '',
+        state_code: salePoint?.state_code ?? '',
       });
     }
   }, [salePoint, isOpen, reset]);
@@ -65,12 +80,20 @@ export function SalePointForm({ isOpen, onClose, onSaved, companyId, salePoint }
         if (data.name !== salePoint.name) payload.name = data.name;
         if (data.address !== salePoint.address) payload.address = data.address;
         if (data.phone !== salePoint.phone) payload.phone = data.phone;
+        if (data.city !== salePoint.city) payload.city = data.city;
+        if (data.city_code !== salePoint.city_code) payload.city_code = data.city_code;
+        if (data.state !== salePoint.state) payload.state = data.state;
+        if (data.state_code !== salePoint.state_code) payload.state_code = data.state_code;
         return salePointsApi.update(salePoint.id, payload);
       } else {
         const payload: CreateSalePointRequest = {
           name: data.name,
           address: data.address || undefined,
           phone: data.phone || undefined,
+          city: data.city || undefined,
+          city_code: data.city_code || undefined,
+          state: data.state || undefined,
+          state_code: data.state_code || undefined,
         };
         return salePointsApi.create(companyId, payload);
       }
@@ -119,14 +142,23 @@ export function SalePointForm({ isOpen, onClose, onSaved, companyId, salePoint }
           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
         </div>
 
+        {/* Location Selector (State & City) */}
+        <LocationSelector
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+          isRequired={true}
+        />
+
         {/* Address */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Dirección (Detalle)</label>
           <input
             type="text"
             {...register('address')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Calle 10 #15-20"
+            placeholder="Calle 10 #15-20, Barrio Centro"
           />
         </div>
 

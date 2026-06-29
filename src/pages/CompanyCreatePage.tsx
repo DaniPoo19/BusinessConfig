@@ -6,7 +6,15 @@ import { toast } from '../components/ui/Toast';
 import { companiesApi } from '../services/adminApi';
 import type { CreateCompanyRequest, BusinessType } from '../types/company';
 import { BUSINESS_TEMPLATES } from '../types/company';
+import colombiaData from '../assets/data/colombia-regions.json';
 
+interface Region {
+  id: string;
+  name: string;
+  municipalities: { id: string; name: string }[];
+}
+
+const regions = colombiaData as Region[];
 // ============================================
 // Template Selector Card (Step 1)
 // ============================================
@@ -137,6 +145,10 @@ export function CompanyCreatePage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [stateCode, setStateCode] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [cityCode, setCityCode] = useState('');
+  const [cityName, setCityName] = useState('');
   const [nit, setNit] = useState('');
 
   // Owner state
@@ -180,6 +192,10 @@ export function CompanyCreatePage() {
         email: email.trim(),
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
+        city: cityName || undefined,
+        city_code: cityCode || undefined,
+        state: stateName || undefined,
+        state_code: stateCode || undefined,
         nit: nit.trim() || undefined,
         owner_name: ownerName.trim(),
         owner_email: ownerEmail.trim(),
@@ -313,14 +329,69 @@ export function CompanyCreatePage() {
                 />
               </div>
 
+              {/* Department Select */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Departamento <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={stateCode}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const name = regions.find(r => r.id === code)?.name || '';
+                    setStateCode(code);
+                    setStateName(name);
+                    setCityCode('');
+                    setCityName('');
+                  }}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Selecciona un departamento</option>
+                  {regions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ciudad / Municipio <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={cityCode}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const name = regions.find(r => r.id === stateCode)?.municipalities.find(m => m.id === code)?.name || '';
+                    setCityCode(code);
+                    setCityName(name);
+                  }}
+                  required
+                  disabled={!stateCode}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
+                >
+                  <option value="">
+                    {stateCode ? "Selecciona un municipio" : "Primero elige un departamento"}
+                  </option>
+                  {stateCode && regions.find(r => r.id === stateCode)?.municipalities.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección (Detalle)</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Calle 10 #15-20, Centro"
+                  placeholder="Calle 10 #15-20, Barrio Centro"
                 />
               </div>
 
