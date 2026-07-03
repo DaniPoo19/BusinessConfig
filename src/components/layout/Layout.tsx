@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Building2,
   ArrowRightLeft,
-  FileSpreadsheet,
   CreditCard,
   LogOut,
   Menu,
@@ -21,7 +20,6 @@ const navItems = [
   { to: '/suscripciones', label: 'Suscripciones', icon: CreditCard },
   { to: '/configuracion/planes', label: 'Configurar Planes', icon: Settings },
   { to: '/importar-parametros', label: 'Importar Datos', icon: ArrowRightLeft },
-  { to: '/importar-csv', label: 'Importar CSV', icon: FileSpreadsheet },
 ];
 
 export function Layout() {
