@@ -4,10 +4,8 @@ import { motion } from 'framer-motion';
 import {
   Building2,
   Store,
-  ArrowRightLeft,
   FileSpreadsheet,
   Package,
-  PlusCircle,
   LayoutDashboard,
   ShieldCheck,
   ChefHat,
@@ -133,20 +131,6 @@ export function DashboardPage() {
   ];
 
   const quickActions = [
-    {
-      title: 'Nueva Empresa',
-      description: 'Registra un nuevo negocio y configura su tipo de tienda inicial.',
-      icon: PlusCircle,
-      action: () => navigate('/empresas/nueva'),
-      color: 'hover:border-blue-300 hover:bg-blue-50/20 text-blue-600',
-    },
-    {
-      title: 'Copiar Parámetros',
-      description: 'Replica horarios, productos o coberturas de una sucursal a otra.',
-      icon: ArrowRightLeft,
-      action: () => navigate('/importar-parametros'),
-      color: 'hover:border-emerald-300 hover:bg-emerald-50/20 text-emerald-600',
-    },
     {
       title: 'Importar Catálogo (CSV)',
       description: 'Carga productos de forma masiva para poblar menús rápidamente.',
