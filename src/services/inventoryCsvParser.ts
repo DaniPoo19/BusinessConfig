@@ -41,6 +41,7 @@ export interface ParsedRecipeIngredient {
   itemName: string;
   qtyToDeduct: number;
   unit: UnitOfMeasure;
+  tipoConsumo?: string;
 }
 
 /** A variation of a product with its recipe */
@@ -209,6 +210,7 @@ export function parseInventoryCsv(raw: string): InventoryCsvParseResult {
     const stockRaw = cells[10] || '';
     const qtyRecipeRaw = cells[11] || '';
     const alertRaw = cells[12] || '';
+    const tipoConsumoRaw = cells[13] || '';
 
     // --- Validations ---
     const tipo = VALID_TYPES[tipoRaw];
@@ -316,6 +318,7 @@ export function parseInventoryCsv(raw: string): InventoryCsvParseResult {
         itemName,
         qtyToDeduct: qtyRecipe,
         unit,
+        tipoConsumo: tipoConsumoRaw.trim() || undefined,
       });
     }
   }

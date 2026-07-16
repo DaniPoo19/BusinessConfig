@@ -4,6 +4,7 @@ import {
   subscriptionsApi,
   companyRefsApi,
   paymentMethodsApi,
+  modulesApi,
 } from '../services/billingApi';
 import type { PeriodType } from '../types/subscription';
 
@@ -38,6 +39,13 @@ export function usePlans(activeOnly = true) {
   return useQuery({
     queryKey: ['plans', activeOnly],
     queryFn: () => plansApi.list(activeOnly),
+  });
+}
+
+export function useModules() {
+  return useQuery({
+    queryKey: ['modules'],
+    queryFn: () => modulesApi.list(),
   });
 }
 
@@ -230,6 +238,24 @@ export function useUpdatePlanDiscount() {
       periodType: PeriodType;
       discountPercentage: number;
     }) => plansApi.updateDiscount(planId, periodType, discountPercentage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+}
+
+export function useCreatePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (plan: {
+      name: string;
+      slug: string;
+      description: string;
+      base_price_monthly: number;
+      is_active: boolean;
+      sort_order: number;
+      module_ids: string[];
+    }) => plansApi.create(plan),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
     },

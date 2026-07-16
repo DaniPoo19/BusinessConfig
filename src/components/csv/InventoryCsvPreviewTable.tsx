@@ -135,13 +135,22 @@ function ProductRecipesTable({ products }: { products: ParsedProduct[] }) {
                   {variation.ingredients.map((ing, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1.5 text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full"
                     >
                       <Box className="h-3 w-3" />
                       {ing.itemName}
                       <span className="font-semibold">
                         ×{formatQty(ing.qtyToDeduct)} {unitLabel(ing.unit)}
                       </span>
+                      {ing.tipoConsumo && (
+                        <span className={`text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wider ${
+                          ing.tipoConsumo.toLowerCase() === 'llevar'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-green-100 text-green-800 border border-green-200'
+                        }`}>
+                          {ing.tipoConsumo}
+                        </span>
+                      )}
                     </span>
                   ))}
                 </div>

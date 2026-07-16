@@ -65,6 +65,31 @@ export const plansApi = {
     return handleResponse<SubscriptionPlan[]>(res);
   },
 
+  async create(plan: {
+    name: string;
+    slug: string;
+    description: string;
+    base_price_monthly: number;
+    is_active: boolean;
+    sort_order: number;
+    module_ids: string[];
+  }): Promise<SubscriptionPlan> {
+    const res = await fetchWithAuth(`${API}/api/v1/admin/billing/plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: plan.name,
+        slug: plan.slug,
+        description: plan.description,
+        base_price_monthly: plan.base_price_monthly,
+        is_active: plan.is_active,
+        sort_order: plan.sort_order,
+        module_ids: plan.module_ids,
+      }),
+    });
+    return handleResponse<SubscriptionPlan>(res);
+  },
+
   async getById(id: string): Promise<SubscriptionPlan> {
     const res = await fetchWithAuth(`${API}/api/v1/admin/billing/plans/${id}`);
     return handleResponse<SubscriptionPlan>(res);

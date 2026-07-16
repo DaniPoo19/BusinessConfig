@@ -508,7 +508,7 @@ export function CsvImportPage() {
                     description={
                       importType === 'products'
                         ? 'Formato esperado: Nombre; Categoría; Descripción; Variación; Precio'
-                        : 'Formato esperado: CSV de 13 columnas incluyendo Tipo, Nombre Producto, Artículo Inventario, etc.'
+                        : 'Formato esperado: CSV de 13 o 14 columnas incluyendo Tipo, Nombre Producto, Artículo Inventario, etc. (14ª columna para Llevar/Local)'
                     }
                   />
                   <CsvUploader
@@ -553,14 +553,16 @@ Brownie;Postres;Brownie de chocolate;;7500`}
                           transition={{ duration: 0.15 }}
                         >
                           <code className="block text-[9px] text-gray-500 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">
-{`Tipo;Nombre Producto;Categoría Prod;Descripción;Variación;Precio Venta;Nombre Art Inventario;Cat Inv;Unidad;Costo Unit;Stock Inicial;Qty Receta;Alerta Min
-ARTICULO;Manigueta Universal;Ferretería;Repuesto;;15000;Manigueta Universal;Repuestos;UNITS;5000;50;1;5
-RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Leche;Lácteos;MILLILITERS;3;0;200;5000
-RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Azúcar;Ingredientes;GRAMS;5;0;50;2000`}
+{`Tipo;Nombre Producto;Categoría Prod;Descripción;Variación;Precio Venta;Nombre Art Inventario;Cat Inv;Unidad;Costo Unit;Stock Inicial;Qty Receta;Alerta Min;Llevar/Local
+ARTICULO;Manigueta Universal;Ferretería;Repuesto;;15000;Manigueta Universal;Repuestos;UNITS;5000;50;1;5;;
+RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Leche;Lácteos;MILLILITERS;3;0;200;5000;Local
+RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Azúcar;Ingredientes;GRAMS;5;0;50;2000;Local
+RECETA;Helado Vainilla;Helados;Artesanal;Pequeño;8000;Vaso Para Llevar;Envases;UNITS;200;50;1;10;Llevar`}
                           </code>
-                          <div className="mt-2.5 space-y-1 text-[10px] text-gray-400">
+                          <div className="mt-2.5 space-y-1.5 text-[10px] text-gray-400">
                             <p><b>ARTICULO</b>: Materia prima directa (1 venta = 1 reducción directa de stock).</p>
                             <p><b>RECETA</b>: Múltiples ingredientes. Cada fila asocia una materia prima a la receta de la variación del producto.</p>
+                            <p><b>Llevar/Local</b> (14ª columna opcional): Permite definir si el ingrediente es de tipo <b>Llevar</b> (se guardará como empaque) o de tipo <b>Local</b> (receta base).</p>
                           </div>
                         </motion.div>
                       )}

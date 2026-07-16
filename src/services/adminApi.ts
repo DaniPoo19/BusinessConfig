@@ -451,6 +451,7 @@ export const productsApi = {
             price: pv.price,
             photo: '',
             base_ingredients: [],
+            packaging_ingredients: [],
             customization_groups: [],
             min_groups_required: 0,
           })),

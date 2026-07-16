@@ -426,8 +426,8 @@ export const inventoryApi = {
   },
 
   /**
-   * Link BOM base_ingredients to a product's variations.
-   * Builds base_ingredients from the parsed recipe and PUTs the product.
+   * Link BOM base_ingredients and packaging_ingredients to a product's variations.
+   * Builds base_ingredients and packaging_ingredients from the parsed recipe and PUTs the product.
    */
   async linkRecipesToProduct(
     product: Product,
@@ -436,35 +436,48 @@ export const inventoryApi = {
     companyId: string,
     salePointId: string
   ): Promise<void> {
-    // Build a map of variation type → base_ingredients
+    // Build a map of variation type → { base: ..., packaging: ... }
     const variationRecipes = new Map<
       string,
-      Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }>
+      {
+        base: Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }>;
+        packaging: Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }>;
+      }
     >();
 
     for (const pv of parsed.variations) {
-      const ingredients: Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }> =
-        [];
+      const baseIngredients: Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }> = [];
+      const packagingIngredients: Array<{ inventory_item_id: string; qty_to_deduct: number; unit: string }> = [];
 
       for (const ing of pv.ingredients) {
         const itemId = itemNameToId.get(ing.itemNameKey);
         if (!itemId) continue;
-        ingredients.push({
+        const mappedIng = {
           inventory_item_id: itemId,
           qty_to_deduct: ing.qtyToDeduct,
           unit: ing.unit,
-        });
+        };
+
+        if (ing.tipoConsumo?.trim().toLowerCase() === 'llevar') {
+          packagingIngredients.push(mappedIng);
+        } else {
+          baseIngredients.push(mappedIng);
+        }
       }
 
-      variationRecipes.set(pv.type.trim().toLowerCase(), ingredients);
+      variationRecipes.set(pv.type.trim().toLowerCase(), {
+        base: baseIngredients,
+        packaging: packagingIngredients,
+      });
     }
 
-    // Update the product's price_variations with base_ingredients
+    // Update the product's price_variations with base_ingredients and packaging_ingredients
     const updatedVariations = product.price_variations.map((pv) => {
-      const recipe = variationRecipes.get(pv.type.trim().toLowerCase());
+      const recipes = variationRecipes.get(pv.type.trim().toLowerCase());
       return {
         ...pv,
-        base_ingredients: recipe || pv.base_ingredients || [],
+        base_ingredients: recipes ? recipes.base : (pv.base_ingredients || []),
+        packaging_ingredients: recipes ? recipes.packaging : (pv.packaging_ingredients || []),
       };
     });
 

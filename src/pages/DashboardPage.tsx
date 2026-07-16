@@ -27,7 +27,8 @@ export function DashboardPage() {
 
   // 2. Fetch sale points and module parameters for all companies
   const { data: details, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ['companyDetails', companies.map((c) => c.id)],
+    queryKey: ['companyDetails', companies.map((c) => c.id).join(',')],
+    enabled: companies.length > 0,
     queryFn: async () => {
       if (companies.length === 0) return { salePointsCount: 0, modulesDistribution: { kitchen: 0, delivery: 0, metrics: 0, inventory: 0 } };
 

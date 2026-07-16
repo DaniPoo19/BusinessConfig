@@ -222,6 +222,7 @@ export interface PriceVariation {
   price: number;
   photo?: string;
   base_ingredients?: BOMIngredient[];
+  packaging_ingredients?: BOMIngredient[];
   customization_groups?: CustomizationGroup[];
   min_groups_required?: number;
 }
