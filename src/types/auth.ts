@@ -3,7 +3,7 @@
 // Matches backend API responses
 // ============================================
 
-export type UserRole = 'owner' | 'manager' | 'chef' | 'delivery' | 'cashier' | 'waiter' | 'staff' | 'pending';
+export type UserRole = 'super_owner' | 'owner' | 'manager' | 'chef' | 'delivery' | 'cashier' | 'waiter' | 'staff' | 'pending';
 
 export interface User {
   id: string;

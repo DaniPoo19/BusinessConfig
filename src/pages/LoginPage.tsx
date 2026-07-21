@@ -128,7 +128,7 @@ export function LoginPage() {
         </div>
 
         <p className="text-xs text-gray-400 text-center mt-6">
-          Solo usuarios con rol Owner pueden acceder a este panel
+          Acceso exclusivo para el Super Owner de la plataforma
         </p>
       </div>
     </div>

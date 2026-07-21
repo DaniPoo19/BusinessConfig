@@ -25,7 +25,7 @@ const navItems = [
 ];
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, isSuperOwner, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -131,14 +131,14 @@ export function Layout() {
             </button>
 
             <div className="hidden lg:block">
-              <p className="text-sm text-gray-500">
-                {user?.company_name || 'Mi Empresa'}
+              <p className="text-sm font-semibold text-gray-800">
+                {isSuperOwner ? 'Ingeniero Nexya App' : (user?.company_name || 'Mi Empresa')}
               </p>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="px-2 py-1 bg-primary-50 text-primary-700 rounded-full font-medium capitalize">
-                {user?.role || 'owner'}
+              <span className="px-2.5 py-1 bg-primary-50 text-primary-700 rounded-full font-semibold">
+                {user?.role === 'super_owner' ? 'Super Owner' : user?.role || 'owner'}
               </span>
             </div>
           </div>

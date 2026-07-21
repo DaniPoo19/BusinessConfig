@@ -35,3 +35,13 @@ export {
   DEFAULT_MODULES_EXISTING,
   ENABLED_MODULES_KEY,
 } from './modules';
+export type {
+  PromotionType,
+  ScopeType,
+  PromotionRules,
+  PromotionScope,
+  Schedule,
+  Promotion,
+  CreatePromotionRequest,
+  PromotionsImportResult,
+} from './promotion';

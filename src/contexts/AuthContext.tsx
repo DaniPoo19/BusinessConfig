@@ -39,6 +39,7 @@ interface AuthContextType extends AuthState {
   checkAuth: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
   hasRole: (roles: UserRole[]) => boolean;
+  isSuperOwner: boolean;
   isOwner: boolean;
   isManager: boolean;
 }
@@ -101,19 +102,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkAuth = useCallback(async () => {
     try {
       const storedUser = getStoredUser();
-      if (!storedUser) {
-        const refreshed = await refreshSession();
-        if (refreshed) {
-          try {
-            const freshUser = await authApi.getMe();
-            storeUser(freshUser);
-            setState({ user: freshUser, isAuthenticated: true, isLoading: false });
-            setupRefreshInterval();
-            return;
-          } catch {
-            // Ignore failure, proceed to set unauthenticated
-          }
-        }
+      if (!storedUser || storedUser.role !== 'super_owner') {
+        clearAuthStorage();
         setState({ user: null, isAuthenticated: false, isLoading: false });
         return;
       }
@@ -121,6 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (isTokenExpired()) {
         const refreshed = await refreshSession();
         if (!refreshed) {
+          clearAuthStorage();
           setState({ user: null, isAuthenticated: false, isLoading: false });
           return;
         }
@@ -128,6 +119,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         const freshUser = await authApi.getMe();
+        if (freshUser.role !== 'super_owner') {
+          clearAuthStorage();
+          setState({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
         storeUser(freshUser);
         setState({ user: freshUser, isAuthenticated: true, isLoading: false });
         setupRefreshInterval();
@@ -135,6 +131,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const refreshed = await refreshSession();
         if (refreshed) {
           const freshUser = await authApi.getMe();
+          if (freshUser.role !== 'super_owner') {
+            clearAuthStorage();
+            setState({ user: null, isAuthenticated: false, isLoading: false });
+            return;
+          }
           storeUser(freshUser);
           setState({ user: freshUser, isAuthenticated: true, isLoading: false });
           setupRefreshInterval();
@@ -169,6 +170,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await authApi.login(credentials);
+      
+      // Enforce super_owner role check
+      if (response.user.role !== 'super_owner') {
+        clearAuthStorage();
+        setState({ user: null, isAuthenticated: false, isLoading: false });
+        return {
+          success: false,
+          error: 'Acceso denegado: Este aplicativo está restringido únicamente al Super Owner de la plataforma.',
+        };
+      }
+
       storeTokens(response.access_token, response.refresh_token, response.expires_at);
       storeUser(response.user);
       setState({ user: response.user, isAuthenticated: true, isLoading: false });
@@ -200,11 +212,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!state.user) return false;
     if (roles.length === 0) return true;
     if (roles.includes(state.user.role)) return true;
-    if (state.user.role === 'owner') return true;
+    if (state.user.role === 'super_owner' || state.user.role === 'owner') return true;
     return false;
   }, [state.user]);
 
-  const isOwner = state.user?.role === 'owner';
+  const isSuperOwner = state.user?.role === 'super_owner';
+  const isOwner = state.user?.role === 'owner' || isSuperOwner;
   const isManager = state.user?.role === 'manager';
 
   const value: AuthContextType = {
@@ -214,6 +227,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth,
     refreshSession,
     hasRole,
+    isSuperOwner,
     isOwner,
     isManager,
   };

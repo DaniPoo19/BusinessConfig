@@ -7,14 +7,14 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isSuperOwner, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
     return <LoadingScreen />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !isSuperOwner) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

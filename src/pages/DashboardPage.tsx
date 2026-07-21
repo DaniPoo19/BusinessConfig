@@ -68,7 +68,6 @@ export function DashboardPage() {
         }
       );
     },
-    enabled: companies.length > 0,
   });
 
   const isLoading = isLoadingCompanies || isLoadingDetails;

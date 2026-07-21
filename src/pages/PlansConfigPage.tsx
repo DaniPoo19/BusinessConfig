@@ -323,8 +323,8 @@ const createPlanSchema = z.object({
   description: z.string().optional(),
   basePriceMonthly: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
   isActive: z.boolean(),
-  sortOrder: z.number().int().default(0),
-  moduleIds: z.array(z.string()).default([]),
+  sortOrder: z.number().int(),
+  moduleIds: z.array(z.string()),
 });
 
 type CreatePlanFormValues = z.infer<typeof createPlanSchema>;

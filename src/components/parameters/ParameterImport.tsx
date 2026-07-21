@@ -9,18 +9,21 @@ import {
   AlertTriangle,
   Package,
   Layers,
+  Tag,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Spinner, EmptyState } from '../ui';
 import { toast } from '../ui/Toast';
 import { useCompanies, useSalePoints } from '../../hooks';
 import { parametersApi } from '../../services/parametersApi';
 import { productsApi } from '../../services/adminApi';
+import { promotionsApi } from '../../services/promotionsApi';
 
 const IMPORTABLE_ITEMS = [
   { key: 'BUSINESS_HOURS', label: 'Horarios de Atención', icon: Clock, color: 'text-blue-600 bg-blue-50', desc: 'Hora de apertura y cierre', type: 'parameter' as const },
   { key: 'DELIVERY_COST', label: 'Barrios / Domicilios', icon: Truck, color: 'text-green-600 bg-green-50', desc: 'Lista de barrios con precios', type: 'parameter' as const },
   { key: 'PRODUCTS', label: 'Productos', icon: Package, color: 'text-purple-600 bg-purple-50', desc: 'Todos los productos del catálogo', type: 'products' as const },
   { key: 'CUSTOMIZATION_GROUPS', label: 'Grupos de Personalización', icon: Layers, color: 'text-orange-600 bg-orange-50', desc: 'Sabores y adiciones por producto', type: 'groups' as const },
+  { key: 'PROMOTIONS', label: 'Promociones', icon: Tag, color: 'text-rose-600 bg-rose-50', desc: 'Descuentos, combos y 2x1', type: 'promotions' as const },
 ] as const;
 
 type ImportableKey = (typeof IMPORTABLE_ITEMS)[number]['key'];
@@ -170,6 +173,43 @@ export function ParameterImport() {
             error: err instanceof Error ? err.message : 'Error desconocido',
           });
         }
+      } else if (item.type === 'promotions') {
+        // Import promotions
+        try {
+          const result = await promotionsApi.importPromotions(
+            sourceSalePointId,
+            targetCompanyId,
+            targetSalePointId,
+            (done, total) => setProgress(`Importando promociones... ${done}/${total}`)
+          );
+
+          if (result.failed === 0) {
+            importResults.push({
+              key,
+              success: true,
+              detail: `${result.successful} promoción${result.successful !== 1 ? 'es' : ''} importada${result.successful !== 1 ? 's' : ''}`,
+            });
+          } else if (result.successful === 0) {
+            importResults.push({
+              key,
+              success: false,
+              error: `Todas fallaron (${result.failed})`,
+              detail: result.errors.slice(0, 3).join('; '),
+            });
+          } else {
+            importResults.push({
+              key,
+              success: true,
+              detail: `${result.successful} importadas, ${result.failed} fallaron`,
+            });
+          }
+        } catch (err) {
+          importResults.push({
+            key,
+            success: false,
+            error: err instanceof Error ? err.message : 'Error desconocido',
+          });
+        }
       }
     }
 
@@ -214,7 +254,7 @@ export function ParameterImport() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">Importar Datos</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Copia horarios, barrios, productos y grupos de personalización de una sucursal a otra
+          Copia horarios, barrios, productos, grupos de personalización y promociones de una sucursal a otra
         </p>
       </div>
 
