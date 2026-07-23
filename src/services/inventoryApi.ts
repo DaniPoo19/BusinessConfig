@@ -399,6 +399,7 @@ export const inventoryApi = {
       if (defaultW) return defaultW.id;
       const activeW = warehouses.find((w) => w.is_active);
       if (activeW) return activeW.id;
+      if (warehouses.length > 0) return warehouses[0].id;
     } catch {
       // Ignore — might not have any
     }
@@ -410,19 +411,37 @@ export const inventoryApi = {
       if (defaultW) return defaultW.id;
       const activeW = warehouses.find((w) => w.is_active);
       if (activeW) return activeW.id;
+      if (warehouses.length > 0) return warehouses[0].id;
     } catch {
       // Ignore
     }
 
     // Create new default warehouse
-    const created = await this.createWarehouse({
-      company_id: companyId,
-      sale_point_id: salePointId,
-      name: 'Bodega Principal',
-      description: 'Bodega creada automáticamente durante importación de inventario',
-      is_default: true,
-    });
-    return created.id;
+    try {
+      const created = await this.createWarehouse({
+        company_id: companyId,
+        sale_point_id: salePointId,
+        name: 'Bodega Principal',
+        description: 'Bodega creada automáticamente durante importación de inventario',
+        is_default: true,
+      });
+      return created.id;
+    } catch (err) {
+      // Fallback if creation failed due to pre-existing warehouse or race condition
+      try {
+        const warehouses = await this.getWarehousesBySalePoint(salePointId);
+        if (warehouses.length > 0) return warehouses[0].id;
+      } catch {
+        // Ignore
+      }
+      try {
+        const warehouses = await this.getWarehousesByCompany(companyId);
+        if (warehouses.length > 0) return warehouses[0].id;
+      } catch {
+        // Ignore
+      }
+      throw err;
+    }
   },
 
   /**
