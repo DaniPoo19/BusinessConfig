@@ -30,7 +30,7 @@ export function DashboardPage() {
     queryKey: ['companyDetails', companies.map((c) => c.id).join(',')],
     enabled: companies.length > 0,
     queryFn: async () => {
-      if (companies.length === 0) return { salePointsCount: 0, modulesDistribution: { kitchen: 0, delivery: 0, metrics: 0, inventory: 0 } };
+      if (companies.length === 0) return { salePointsCount: 0, modulesDistribution: { kitchen: 0, delivery: 0, metrics: 0, inventory: 0, pos: 0 } };
 
       const promises = companies.map(async (company) => {
         const [spRes, modParam] = await Promise.all([
@@ -47,6 +47,7 @@ export function DashboardPage() {
             delivery: enabledModules?.delivery?.enabled ? 1 : 0,
             metrics: enabledModules?.metrics?.enabled ? 1 : 0,
             inventory: enabledModules?.inventory?.enabled ? 1 : 0,
+            pos: enabledModules?.pos?.enabled ? 1 : 0,
           },
         };
       });
@@ -60,11 +61,12 @@ export function DashboardPage() {
           acc.modulesDistribution.delivery += curr.modules.delivery;
           acc.modulesDistribution.metrics += curr.modules.metrics;
           acc.modulesDistribution.inventory += curr.modules.inventory;
+          acc.modulesDistribution.pos += curr.modules.pos;
           return acc;
         },
         {
           salePointsCount: 0,
-          modulesDistribution: { kitchen: 0, delivery: 0, metrics: 0, inventory: 0 },
+          modulesDistribution: { kitchen: 0, delivery: 0, metrics: 0, inventory: 0, pos: 0 },
         }
       );
     },
@@ -127,6 +129,14 @@ export function DashboardPage() {
       icon: Boxes,
       color: 'bg-pink-50 text-pink-600 border-pink-100',
       description: 'Control de existencias de materias primas y enlace de recetas BOM.',
+    },
+    {
+      id: 'pos',
+      label: 'Venta Rápida (POS)',
+      count: details?.modulesDistribution.pos ?? 0,
+      icon: Store,
+      color: 'bg-teal-50 text-teal-600 border-teal-100',
+      description: 'Terminal de venta directa en mostrador con cobro y emisión de recibos.',
     },
   ];
 

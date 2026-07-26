@@ -9,6 +9,7 @@ import { toast } from '../components/ui/Toast';
 import { usePlans, useUpdatePlanPrice, useUpdatePlanDiscount, useModules, useCreatePlan } from '../hooks';
 import { formatCOP, PERIOD_LABELS } from '../types/subscription';
 import type { SubscriptionPlan, PeriodType } from '../types/subscription';
+import { MODULE_CATALOG } from '../types/modules';
 
 export function PlansConfigPage() {
   const { data: plansData, isLoading } = usePlans(false);
@@ -42,7 +43,7 @@ export function PlansConfigPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Configuración de Planes</h1>
             <p className="text-sm text-gray-500">
-              Gestiona los precios base y descuentos por defecto de los planes de suscripción.
+              Gestiona los precios base, módulos incluidos y descuentos de los planes de suscripción.
             </p>
           </div>
         </div>
@@ -114,28 +115,55 @@ function PlanCard({
 }) {
   return (
     <Card className="flex flex-col h-full border-2 hover:border-primary-200 transition-all">
-      <div className="flex-1">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${plan.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-              {plan.is_active ? 'Activo' : 'Inactivo'}
-            </span>
+      <div className="flex-1 flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+              <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mt-1 ${plan.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                {plan.is_active ? 'Activo' : 'Inactivo'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Precio Base (Mensual)</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-gray-900">{formatCOP(plan.base_price_monthly)}</span>
+              <button onClick={onEditPrice} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Editar precio base">
+                <Edit2 className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mt-2 line-clamp-2">{plan.description}</p>
+          </div>
+
+          {/* Modules Included Badges */}
+          <div className="mb-4 pt-3 border-t border-gray-100">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Módulos Incluidos</p>
+            {plan.modules && plan.modules.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {plan.modules.map((m) => {
+                  const catalogEntry = MODULE_CATALOG.find(cat => cat.id === m.slug || cat.id === m.id);
+                  const label = catalogEntry?.label || m.name || m.slug;
+                  const icon = catalogEntry?.icon || '🧩';
+                  return (
+                    <span
+                      key={m.id || m.slug}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs"
+                    >
+                      <span>{icon}</span>
+                      <span>{label}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">Módulos base estándar</p>
+            )}
           </div>
         </div>
 
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Precio Base (Mensual)</p>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-gray-900">{formatCOP(plan.base_price_monthly)}</span>
-            <button onClick={onEditPrice} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-              <Edit2 className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">{plan.description}</p>
-        </div>
-
-        <div className="space-y-3 pt-4 border-t border-gray-100">
+        <div className="space-y-2 pt-3 border-t border-gray-100 mt-auto">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Descuentos por Periodo</p>
           
           {(['6_months', 'annual'] as PeriodType[]).map((pt) => {
@@ -151,7 +179,7 @@ function PlanCard({
                   <span className={`text-sm font-bold ${pct > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {pct}%
                   </span>
-                  <button onClick={() => onEditDiscount(pt, pct)} className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors">
+                  <button onClick={() => onEditDiscount(pt, pct)} className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors" title="Editar descuento">
                     <Edit2 className="h-3 w-3" />
                   </button>
                 </div>
@@ -330,7 +358,6 @@ const createPlanSchema = z.object({
 type CreatePlanFormValues = z.infer<typeof createPlanSchema>;
 
 function CreatePlanModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { data: modules } = useModules();
   const createPlanMutation = useCreatePlan();
 
   const {
@@ -349,7 +376,7 @@ function CreatePlanModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
       basePriceMonthly: 0,
       isActive: true,
       sortOrder: 0,
-      moduleIds: [],
+      moduleIds: MODULE_CATALOG.map(m => m.id), // Default to all modules included
     },
   });
 
@@ -478,36 +505,41 @@ function CreatePlanModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
           </label>
         </div>
 
-        <div className="pt-2 border-t border-gray-100">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Módulos Incluidos</label>
-          {modules && modules.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {modules.map((mod) => (
+        {/* Guaranteed Module Catalog Checklist */}
+        <div className="pt-3 border-t border-gray-100">
+          <label className="block text-sm font-bold text-gray-800 mb-1">Módulos Incluidos en el Plan</label>
+          <p className="text-xs text-gray-500 mb-3">Selecciona los módulos que estarán habilitados por defecto al activar este plan.</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {MODULE_CATALOG.map((mod) => {
+              const isChecked = selectedModules.includes(mod.id);
+              return (
                 <div
                   key={mod.id}
                   onClick={() => handleModuleToggle(mod.id)}
-                  className={`flex items-start gap-2.5 p-2.5 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
-                    selectedModules.includes(mod.id)
-                      ? 'border-primary-500 bg-primary-50/30'
-                      : 'border-gray-200 bg-white'
+                  className={`flex items-start gap-2.5 p-3 border rounded-xl cursor-pointer transition-all ${
+                    isChecked
+                      ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-300'
+                      : 'border-gray-200 bg-white hover:bg-gray-50'
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedModules.includes(mod.id)}
+                    checked={isChecked}
                     onChange={() => {}}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-0.5"
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1"
                   />
-                  <div>
-                    <p className="text-xs font-bold text-gray-900">{mod.name}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{mod.description}</p>
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <span className="text-2xl flex-shrink-0">{mod.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-gray-900">{mod.label}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5 leading-snug truncate">{mod.description}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400">No hay módulos disponibles en el sistema.</p>
-          )}
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

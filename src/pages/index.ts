@@ -8,3 +8,4 @@ export { PlansConfigPage } from './PlansConfigPage';
 export { LoginPage } from './LoginPage';
 export { CustomizationGroupsPage } from './CustomizationGroupsPage';
 export { DashboardPage } from './DashboardPage';
+export { MetricsPage } from './MetricsPage';

@@ -3,7 +3,7 @@
 // Defines the premium modules that can be toggled per company
 // ============================================
 
-export type ModuleId = 'kitchen' | 'delivery' | 'metrics' | 'inventory';
+export type ModuleId = 'kitchen' | 'delivery' | 'metrics' | 'inventory' | 'pos';
 
 export interface ModuleConfig {
   enabled: boolean;
@@ -22,13 +22,14 @@ export interface ModuleCatalogEntry {
 }
 
 export const MODULE_CATALOG: ModuleCatalogEntry[] = [
-  { id: 'kitchen',   label: 'Cocina',     description: 'Monitor de preparación en tiempo real',  icon: '👨‍🍳' },
-  { id: 'delivery',  label: 'Domicilios', description: 'Gestión de repartidores y entregas',     icon: '🛵' },
-  { id: 'metrics',   label: 'Métricas',   description: 'Estadísticas y reportes de ventas',      icon: '📊' },
-  { id: 'inventory', label: 'Inventario', description: 'Control de stock y materias primas',     icon: '📦' },
+  { id: 'kitchen',   label: 'Cocina',                  description: 'Monitor de preparación en tiempo real',  icon: '👨‍🍳' },
+  { id: 'delivery',  label: 'Domicilios',              description: 'Gestión de repartidores y entregas',     icon: '🛵' },
+  { id: 'metrics',   label: 'Métricas',                description: 'Estadísticas y reportes de ventas',      icon: '📊' },
+  { id: 'inventory', label: 'Inventario',              description: 'Control de stock y materias primas',     icon: '📦' },
+  { id: 'pos',       label: 'Mostrador (Venta Rápida)', description: 'Terminal de venta directa en mostrador', icon: '🖥️' },
 ];
 
-export const ALL_MODULE_IDS: ModuleId[] = ['kitchen', 'delivery', 'metrics', 'inventory'];
+export const ALL_MODULE_IDS: ModuleId[] = ['kitchen', 'delivery', 'metrics', 'inventory', 'pos'];
 
 /** Default for NEW companies — all premium disabled */
 export const DEFAULT_MODULES_NEW: EnabledModulesValue = {
@@ -37,6 +38,7 @@ export const DEFAULT_MODULES_NEW: EnabledModulesValue = {
     delivery:  { enabled: false, activated_at: null },
     metrics:   { enabled: false, activated_at: null },
     inventory: { enabled: false, activated_at: null },
+    pos:       { enabled: false, activated_at: null },
   },
 };
 
@@ -47,6 +49,7 @@ export const DEFAULT_MODULES_EXISTING: EnabledModulesValue = {
     delivery:  { enabled: true,  activated_at: null },
     metrics:   { enabled: true,  activated_at: null },
     inventory: { enabled: true,  activated_at: null },
+    pos:       { enabled: true,  activated_at: null },
   },
 };
 

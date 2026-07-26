@@ -100,6 +100,11 @@ function TemplateSelector({ selectedTemplate, onSelect }: TemplateSelectorProps)
                     Toma de Pedidos
                   </span>
                 )}
+                {template.modules.pos && (
+                  <span className="px-2 py-0.5 bg-teal-100 text-teal-700 text-xs rounded-full font-medium">
+                    Mostrador
+                  </span>
+                )}
               </div>
 
               {/* Sale types */}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
+  BarChart3,
   Building2,
   ArrowRightLeft,
   FileSpreadsheet,
@@ -17,6 +18,7 @@ import { toast } from '../ui/Toast';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/metricas', label: 'Métricas SaaS', icon: BarChart3 },
   { to: '/empresas', label: 'Empresas', icon: Building2 },
   { to: '/suscripciones', label: 'Suscripciones', icon: CreditCard },
   { to: '/configuracion/planes', label: 'Configurar Planes', icon: Settings },

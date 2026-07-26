@@ -11,6 +11,7 @@ import {
   DashboardPage,
   BillingPage,
   PlansConfigPage,
+  MetricsPage,
 } from '../pages';
 import { ProtectedRoute, GuestRoute } from './guards';
 
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'metricas',
+        element: <MetricsPage />,
       },
       {
         path: 'empresas',

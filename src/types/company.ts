@@ -56,6 +56,7 @@ export interface BusinessTemplateConfig {
     inventory: boolean;
     metrics: boolean;
     waiter: boolean;
+    pos: boolean;
   };
   saleTypes: string[];
   suggestedRoles: string[];
@@ -68,7 +69,7 @@ export const BUSINESS_TEMPLATES: Record<BusinessType, BusinessTemplateConfig> = 
     name: 'Tienda Comidas',
     description: 'Restaurantes, heladerías, pizzerías, cafeterías. Flujo completo con cocina, toma de pedidos y domicilios.',
     icon: '🍦',
-    modules: { kitchen: true, delivery: true, inventory: true, metrics: true, waiter: true },
+    modules: { kitchen: true, delivery: true, inventory: true, metrics: true, waiter: true, pos: true },
     saleTypes: ['ON_SITE', 'PICKUP', 'DELIVERY'],
     suggestedRoles: ['owner', 'manager', 'cashier', 'waiter', 'chef', 'delivery'],
   },
@@ -77,7 +78,7 @@ export const BUSINESS_TEMPLATES: Record<BusinessType, BusinessTemplateConfig> = 
     name: 'Tienda Artículos',
     description: 'Minimercados, papelerías, ferreterías. Venta directa con domicilios opcionales.',
     icon: '🏪',
-    modules: { kitchen: false, delivery: true, inventory: true, metrics: true, waiter: false },
+    modules: { kitchen: false, delivery: true, inventory: true, metrics: true, waiter: false, pos: true },
     saleTypes: ['COUNTER_SALE', 'DELIVERY'],
     suggestedRoles: ['owner', 'manager', 'cashier', 'delivery'],
   },
