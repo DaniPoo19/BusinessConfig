@@ -17,6 +17,9 @@ export interface Company {
   is_active: boolean;
   email_from_address?: string;
   email_from_name?: string;
+  sale_points_count?: number;
+  sale_points?: SalePoint[];
+  business_type?: BusinessType;
   created_at: string;
   updated_at: string;
 }

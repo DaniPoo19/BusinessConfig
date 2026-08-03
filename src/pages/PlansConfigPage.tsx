@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Settings, Edit2, Percent, Plus } from 'lucide-react';
 import { Card, Button, Spinner, Modal, EmptyState } from '../components/ui';
 import { toast } from '../components/ui/Toast';
-import { usePlans, useUpdatePlanPrice, useUpdatePlanDiscount, useModules, useCreatePlan } from '../hooks';
+import { usePlans, useUpdatePlanPrice, useUpdatePlanDiscount, useCreatePlan } from '../hooks';
 import { formatCOP, PERIOD_LABELS } from '../types/subscription';
 import type { SubscriptionPlan, PeriodType } from '../types/subscription';
 import { MODULE_CATALOG } from '../types/modules';

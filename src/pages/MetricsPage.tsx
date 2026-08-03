@@ -18,7 +18,6 @@ import {
   Zap,
   BarChart3,
   Search,
-  Filter,
 } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState } from '../components/ui';
 import { toast } from '../components/ui/Toast';

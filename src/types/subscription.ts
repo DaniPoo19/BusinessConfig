@@ -73,6 +73,8 @@ export interface Subscription {
   updated_at: string;
   plan_name?: string;
   company_name?: string;
+  override_price?: number;
+  discount_percentage?: number;
 }
 
 export interface SubscriptionHistory {

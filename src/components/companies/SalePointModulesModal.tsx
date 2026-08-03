@@ -7,6 +7,7 @@ import {
   MODULE_CATALOG,
   DEFAULT_MODULES_NEW,
   ENABLED_MODULES_KEY,
+  ALL_MODULE_IDS,
   type ModuleId,
   type EnabledModulesValue,
   type ModuleConfig,
@@ -65,13 +66,15 @@ export function SalePointModulesModal({
         setParamExists(false);
       }
 
-      // Enforce plan modules are enabled
+      // Enforce plan modules are enabled, and non-plan modules are disabled by default if no parameter exists
       const now = new Date().toISOString();
-      for (const modId of planModules) {
-        if (modId in currentModules) {
-          if (!currentModules[modId as ModuleId].enabled) {
-            currentModules[modId as ModuleId] = { enabled: true, activated_at: now };
-          }
+      const planSlugSet = new Set(planModules);
+
+      for (const modId of ALL_MODULE_IDS) {
+        if (planSlugSet.has(modId)) {
+          currentModules[modId] = { enabled: true, activated_at: currentModules[modId]?.activated_at || now };
+        } else if (!paramExists) {
+          currentModules[modId] = { enabled: false, activated_at: null };
         }
       }
 

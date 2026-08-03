@@ -17,7 +17,7 @@ import type {
 
 
 import { parametersApi } from '../../services/parametersApi';
-import { ENABLED_MODULES_KEY, DEFAULT_MODULES_NEW } from '../../types/modules';
+import { ENABLED_MODULES_KEY, DEFAULT_MODULES_NEW, ALL_MODULE_IDS } from '../../types/modules';
 import type { ModuleId, ModuleConfig, EnabledModulesValue } from '../../types/modules';
 import { SalePointModulesModal } from '../companies/SalePointModulesModal';
 import {
@@ -57,33 +57,33 @@ async function syncModulesForSalePoint(companyId: string, salePointId: string, p
     }
 
     const now = new Date().toISOString();
-    let updated = false;
+    const planSlugSet = new Set(planModules.map(m => m.slug));
 
-    // Enable plan modules
-    for (const mod of planModules) {
-      const modId = mod.slug as ModuleId;
-      if (modId in currentModules && !currentModules[modId].enabled) {
-        currentModules[modId] = { enabled: true, activated_at: now };
-        updated = true;
+    // Align modules strictly with the subscription plan:
+    // Modules in plan -> enabled: true
+    // Modules not in plan -> enabled: false
+    for (const modId of ALL_MODULE_IDS) {
+      if (planSlugSet.has(modId)) {
+        currentModules[modId] = { enabled: true, activated_at: currentModules[modId]?.activated_at || now };
+      } else {
+        currentModules[modId] = { enabled: false, activated_at: null };
       }
     }
 
-    if (updated || !paramExists) {
-      const value: EnabledModulesValue = { modules: currentModules };
-      if (paramExists) {
-        await parametersApi.update(ENABLED_MODULES_KEY, {
-          company_id: companyId,
-          sale_point_id: salePointId,
-          value: value as unknown as Record<string, unknown>,
-        });
-      } else {
-        await parametersApi.create({
-          key: ENABLED_MODULES_KEY,
-          company_id: companyId,
-          sale_point_id: salePointId,
-          value: value as unknown as Record<string, unknown>,
-        });
-      }
+    const value: EnabledModulesValue = { modules: currentModules };
+    if (paramExists) {
+      await parametersApi.update(ENABLED_MODULES_KEY, {
+        company_id: companyId,
+        sale_point_id: salePointId,
+        value: value as unknown as Record<string, unknown>,
+      });
+    } else {
+      await parametersApi.create({
+        key: ENABLED_MODULES_KEY,
+        company_id: companyId,
+        sale_point_id: salePointId,
+        value: value as unknown as Record<string, unknown>,
+      });
     }
   } catch (err) {
     console.error('Error syncing modules:', err);
