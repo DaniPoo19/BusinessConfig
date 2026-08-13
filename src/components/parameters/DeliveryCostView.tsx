@@ -24,7 +24,7 @@ export function DeliveryCostView({
   const [editingNeighbourhood, setEditingNeighbourhood] = useState<DeliveryNeighbourhood | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  const barrios = deliveryCosts?.value.data || [];
+  const barrios = deliveryCosts?.value?.base_prices || deliveryCosts?.value?.data || [];
   const parameterExists = !!deliveryCosts;
 
   const filtered = barrios.filter((b) =>
@@ -56,7 +56,11 @@ export function DeliveryCostView({
       await parametersApi.update('DELIVERY_COST', {
         company_id: companyId,
         sale_point_id: salePointId,
-        value: { data: updatedList },
+        value: {
+          base_prices: updatedList,
+          events: deliveryCosts?.value?.events || [],
+          data: updatedList,
+        },
       });
 
       toast.success('Barrio eliminado correctamente');

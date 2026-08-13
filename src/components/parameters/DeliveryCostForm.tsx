@@ -76,19 +76,25 @@ export function DeliveryCostForm({
         updatedList = [...existingList, { ...data }];
       }
 
-      // Save list to database
+      // Save list to database preserving base_prices, events, and data
+      const valueToSave = {
+        base_prices: updatedList,
+        events: (existingList as any)?.events || [],
+        data: updatedList,
+      };
+
       if (parameterExists) {
         await parametersApi.update('DELIVERY_COST', {
           company_id: companyId,
           sale_point_id: salePointId,
-          value: { data: updatedList },
+          value: valueToSave,
         });
       } else {
         await parametersApi.create({
           key: 'DELIVERY_COST',
           company_id: companyId,
           sale_point_id: salePointId,
-          value: { data: updatedList },
+          value: valueToSave,
         });
       }
 

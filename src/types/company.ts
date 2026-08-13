@@ -161,7 +161,9 @@ export interface BusinessHoursValue {
 
 // Delivery Cost (Barrios) parameter value
 export interface DeliveryCostValue {
-  data: DeliveryNeighbourhood[];
+  base_prices?: DeliveryNeighbourhood[];
+  events?: any[];
+  data?: DeliveryNeighbourhood[];
 }
 
 export interface DeliveryNeighbourhood {
