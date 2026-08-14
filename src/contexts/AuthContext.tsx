@@ -177,7 +177,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setState({ user: null, isAuthenticated: false, isLoading: false });
         return {
           success: false,
-          error: 'Acceso denegado: Este aplicativo está restringido únicamente al Super Owner de la plataforma.',
+          error: 'Acceso denegado.',
         };
       }
 
